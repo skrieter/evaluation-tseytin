@@ -1,0 +1,9 @@
+license:
+  name: lgpl
+  version: 3
+program:
+  name: Evaluation-Tseytin
+  description: Program for the evaluation of the Tseytin transformation.
+  authors: Elias Kuiter
+  url: TBD
+  year: 2021

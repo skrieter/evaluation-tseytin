@@ -1,0 +1,12 @@
+.settings/
+bin/
+gen/
+.classpath
+.project
+target/
+misc/
+/dependency-reduced-pom.xml
+models/
+results/
+*.iml
+*.jar*
