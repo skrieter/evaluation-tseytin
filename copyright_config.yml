@@ -5,5 +5,5 @@ program:
   name: Evaluation-Tseytin
   description: Program for the evaluation of the Tseytin transformation.
   authors: Elias Kuiter
-  url: TBD
+  url: https://github.com/ekuiter/evaluation-tseytin
   year: 2021
