@@ -1,23 +1,28 @@
 package org.spldev.evaluation.tseytin;
 
-import java.util.Arrays;
+import java.util.*;
 
-import org.spldev.evaluation.Evaluator;
-import org.spldev.evaluation.util.ModelReader;
-import org.spldev.formula.ModelRepresentation;
-import org.spldev.formula.analysis.sat4j.HasSolutionAnalysis;
-import org.spldev.formula.expression.CCNFProvider;
-import org.spldev.formula.expression.Formula;
-import org.spldev.formula.expression.TsyetinCNFProvider;
-import org.spldev.formula.expression.atomic.literal.VariableMap;
-import org.spldev.formula.expression.io.parse.KMaxFormat;
-import org.spldev.util.Provider;
-import org.spldev.util.io.csv.CSVWriter;
-import org.spldev.util.io.format.FormatSupplier;
-import org.spldev.util.logging.Logger;
+import org.spldev.evaluation.*;
+import org.spldev.evaluation.util.*;
+import org.spldev.formula.*;
+import org.spldev.formula.analysis.sat4j.*;
+import org.spldev.formula.clauses.*;
+import org.spldev.formula.expression.*;
+import org.spldev.formula.expression.atomic.literal.*;
+import org.spldev.formula.expression.io.parse.*;
+import org.spldev.util.*;
+import org.spldev.util.extension.*;
+import org.spldev.util.io.csv.*;
+import org.spldev.util.io.format.*;
+import org.spldev.util.logging.*;
 
 public class TseytinEvaluator extends Evaluator {
 	protected CSVWriter writer;
+
+	public static void main(String[] args) {
+		ExtensionLoader.load();
+		new TseytinEvaluator().run(Arrays.asList("config"));
+	}
 
 	@Override
 	public String getId() {
@@ -28,33 +33,40 @@ public class TseytinEvaluator extends Evaluator {
 	protected void addCSVWriters() {
 		super.addCSVWriters();
 		writer = addCSVWriter("evaluation.csv", Arrays.asList("System", "Mode", "Iteration", "Transform Time",
-				"Analysis Time", "Variables", "Clauses"));
+			"Analysis Time", "Variables", "Clauses"));
 	}
 
 	@Override
 	public void evaluate() {
 		tabFormatter.setTabLevel(0);
-		int systemIndexEnd = config.systemNames.size();
+		final int systemIndexEnd = config.systemNames.size();
 		for (systemIndex = 0; systemIndex < systemIndexEnd; systemIndex++) {
 			logSystem();
 			tabFormatter.incTabLevel();
-			String systemName = config.systemNames.get(systemIndex);
-			ModelReader<Formula> fmReader = new ModelReader<>();
+			final String systemName = config.systemNames.get(systemIndex);
+			final ModelReader<Formula> fmReader = new ModelReader<>();
 			fmReader.setPathToFiles(config.modelPath);
 //			fmReader.setFormatSupplier(FormatSupplier.of(new XmlFeatureModelFormat()));
 			fmReader.setFormatSupplier(FormatSupplier.of(new KMaxFormat()));
-			Formula formula = fmReader.read(systemName).orElseThrow(p -> new RuntimeException("no feature model"));
+			final Formula formula = fmReader.read(systemName).orElseThrow(p -> new RuntimeException(
+				"no feature model"));
 			for (int i = 0; i < config.systemIterations.getValue(); i++) {
 				Logger.logInfo("Distributive Transform");
-				transformToCNF(systemName, formula, i, CCNFProvider.fromFormula(), "distrib");
+				transformToCNF(systemName, formula, i, CCNFProvider.fromFormula(), CNFProvider.fromFormula(),
+					"distrib");
 				Logger.logInfo("Tsyetin Transform");
-				transformToCNF(systemName, formula, i, TsyetinCNFProvider.fromFormula(), "tseytin");
+				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(), CNFProvider
+					.fromTseytinFormula(), "tseytin");
+				Logger.logInfo("Hybrid Tsyetin Transform");
+				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(), CNFProvider
+					.fromTseytinFormula(), "hybrid");
 			}
 			tabFormatter.decTabLevel();
 		}
 	}
 
-	private void transformToCNF(String systemName, Formula formula, int i, Provider<Formula> transformer, String transformerName) {
+	private void transformToCNF(String systemName, Formula formula, int i, Provider<Formula> transformer,
+		Provider<CNF> cnfProvider, String transformerName) {
 		writer.createNewLine();
 		try {
 			writer.addValue(systemName);
@@ -70,7 +82,9 @@ public class TseytinEvaluator extends Evaluator {
 			writer.addValue(String.format("%.1f", timeNeeded / 1000_000.0));
 
 			localTime = System.nanoTime();
-			new HasSolutionAnalysis().getResult(rep).get();
+			final HasSolutionAnalysis hasSolutionAnalysis = new HasSolutionAnalysis();
+			hasSolutionAnalysis.setSolverInputProvider(cnfProvider);
+			hasSolutionAnalysis.getResult(rep).get();
 			timeNeeded = System.nanoTime() - localTime;
 			writer.addValue(String.format("%.1f", timeNeeded / 1000_000.0));
 
