@@ -54,10 +54,10 @@ public class TseytinEvaluator extends Evaluator {
 				Logger.logInfo("Distributive Transform");
 				transformToCNF(systemName, formula, i, CCNFProvider.fromFormula(), CNFProvider.fromFormula(),
 					"distrib");
-				Logger.logInfo("Tsyetin Transform");
+				Logger.logInfo("Tseytin Transform");
 				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(), CNFProvider
 					.fromTseytinFormula(), "tseytin");
-				Logger.logInfo("Hybrid Tsyetin Transform");
+				Logger.logInfo("Hybrid Tseytin Transform");
 				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(), CNFProvider
 					.fromTseytinFormula(), "hybrid");
 			}
