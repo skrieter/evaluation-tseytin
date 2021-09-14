@@ -33,7 +33,10 @@ public class TseytinEvaluator extends Evaluator {
 	protected void addCSVWriters() {
 		super.addCSVWriters();
 		writer = addCSVWriter("evaluation.csv", Arrays.asList("System", "Mode", "Iteration", "Transform Time",
-			"Analysis Time", "Variables", "Clauses"));
+			"Analysis Time", "Variables", "Clauses", "TseytinTransformed"));
+
+		// TODO Number of tseytin transformed
+		// TODO Matrix: clauses to metrics
 	}
 
 	@Override
@@ -51,15 +54,25 @@ public class TseytinEvaluator extends Evaluator {
 			final Formula formula = fmReader.read(systemName).orElseThrow(p -> new RuntimeException(
 				"no feature model"));
 			for (int i = 0; i < config.systemIterations.getValue(); i++) {
-				Logger.logInfo("Distributive Transform");
-				transformToCNF(systemName, formula, i, CCNFProvider.fromFormula(), CNFProvider.fromFormula(),
-					"distrib");
+//				Logger.logInfo("Distributive Transform");
+//				transformToCNF(systemName, formula, i, CCNFProvider.fromFormula(), CNFProvider.fromFormula(),
+//					"distrib");
 				Logger.logInfo("Tsyetin Transform");
-				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(), CNFProvider
+				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(0), CNFProvider
 					.fromTseytinFormula(), "tseytin");
 				Logger.logInfo("Hybrid Tsyetin Transform");
-				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(), CNFProvider
-					.fromTseytinFormula(), "hybrid");
+				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(1), CNFProvider
+					.fromTseytinFormula(), "hybrid1");
+				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(10), CNFProvider
+					.fromTseytinFormula(), "hybrid10");
+				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(100), CNFProvider
+					.fromTseytinFormula(), "hybrid100");
+				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(1_000), CNFProvider
+					.fromTseytinFormula(), "hybrid1_000");
+				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(10_000), CNFProvider
+					.fromTseytinFormula(), "hybrid10_000");
+				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(100_000), CNFProvider
+					.fromTseytinFormula(), "hybrid100_000");
 			}
 			tabFormatter.decTabLevel();
 		}
