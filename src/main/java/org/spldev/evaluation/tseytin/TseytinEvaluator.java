@@ -92,14 +92,14 @@ public class TseytinEvaluator extends Evaluator {
 			localTime = System.nanoTime();
 			formula = rep.get(transformer);
 			timeNeeded = System.nanoTime() - localTime;
-			writer.addValue(String.format("%.1f", timeNeeded / 1000_000.0));
+			writer.addValue(timeNeeded);
 
 			localTime = System.nanoTime();
 			final HasSolutionAnalysis hasSolutionAnalysis = new HasSolutionAnalysis();
 			hasSolutionAnalysis.setSolverInputProvider(cnfProvider);
 			hasSolutionAnalysis.getResult(rep).get();
 			timeNeeded = System.nanoTime() - localTime;
-			writer.addValue(String.format("%.1f", timeNeeded / 1000_000.0));
+			writer.addValue(timeNeeded);
 
 			writer.addValue(VariableMap.fromExpression(formula).size());
 			writer.addValue(formula.getChildren().size());
