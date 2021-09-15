@@ -50,7 +50,7 @@ public class TseytinEvaluator extends Evaluator {
 			final ModelReader<Formula> fmReader = new ModelReader<>();
 			fmReader.setPathToFiles(config.modelPath);
 //			fmReader.setFormatSupplier(FormatSupplier.of(new XmlFeatureModelFormat()));
-			fmReader.setFormatSupplier(FormatSupplier.of(new KMaxFormat()));
+			fmReader.setFormatSupplier(FormatSupplier.of(new KConfigReaderFormat()));
 			final Formula formula = fmReader.read(systemName).orElseThrow(p -> new RuntimeException(
 				"no feature model"));
 			for (int i = 0; i < config.systemIterations.getValue(); i++) {
