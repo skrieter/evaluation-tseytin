@@ -58,20 +58,20 @@ public class TseytinEvaluator extends Evaluator {
 //				transformToCNF(systemName, formula, i, CCNFProvider.fromFormula(), CNFProvider.fromFormula(),
 //					"distrib");
 				Logger.logInfo("Tseytin Transform");
-				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(0), CNFProvider
+				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(0), CNFProvider
 					.fromTseytinFormula(), "tseytin");
 				Logger.logInfo("Hybrid Tseytin Transform");
-				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(1), CNFProvider
+				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(1), CNFProvider
 					.fromTseytinFormula(), "hybrid1");
-				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(10), CNFProvider
+				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(10), CNFProvider
 					.fromTseytinFormula(), "hybrid10");
-				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(100), CNFProvider
+				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(100), CNFProvider
 					.fromTseytinFormula(), "hybrid100");
-				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(1_000), CNFProvider
+				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(1_000), CNFProvider
 					.fromTseytinFormula(), "hybrid1_000");
-				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(10_000), CNFProvider
+				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(10_000), CNFProvider
 					.fromTseytinFormula(), "hybrid10_000");
-				transformToCNF(systemName, formula, i, TseytinCNFProvider.fromFormula(100_000), CNFProvider
+				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(100_000), CNFProvider
 					.fromTseytinFormula(), "hybrid100_000");
 			}
 			tabFormatter.decTabLevel();
