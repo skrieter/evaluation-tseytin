@@ -41,14 +41,14 @@ import org.spldev.util.logging.*;
 public class TseytinEvaluator extends Evaluator {
 	protected CSVWriter writer;
 
-	public static void main(String[] args) {
-		ExtensionLoader.load();
-		new TseytinEvaluator().run(Arrays.asList("config"));
-	}
-
 	@Override
 	public String getId() {
 		return "eval-tseytin";
+	}
+
+	@Override
+	public String getDescription() {
+		return "Evaluate the Tseytin transformation of formulas into CNF";
 	}
 
 	@Override

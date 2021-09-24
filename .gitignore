@@ -10,3 +10,5 @@ models/
 results/
 *.iml
 *.jar*
+config
+output
