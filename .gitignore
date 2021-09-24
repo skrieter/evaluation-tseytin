@@ -7,7 +7,6 @@ target/
 misc/
 /dependency-reduced-pom.xml
 models/
-results/
 *.iml
 *.jar*
 config

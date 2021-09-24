@@ -16,6 +16,10 @@ import org.spldev.util.io.csv.*;
 import org.spldev.util.io.format.*;
 import org.spldev.util.logging.*;
 
+/**
+ * Evaluate the (hybrid) Tseitin transformation. This assumes that input formulas
+ * are in a "partial" CNF (i.e., already a conjunction of some formulas).
+ */
 public class TseytinEvaluator extends Evaluator {
 	protected CSVWriter writer;
 
@@ -33,7 +37,7 @@ public class TseytinEvaluator extends Evaluator {
 	protected void addCSVWriters() {
 		super.addCSVWriters();
 		writer = addCSVWriter("evaluation.csv", Arrays.asList("System", "Mode", "Iteration", "Transform Time",
-			"Analysis Time", "Variables", "Clauses", "TseytinTransformed"));
+			"Analysis Time", "Variables", "Clauses", "TseytinClauses"));
 
 		// TODO Number of tseytin transformed
 		// TODO Matrix: clauses to metrics
@@ -49,30 +53,22 @@ public class TseytinEvaluator extends Evaluator {
 			final String systemName = config.systemNames.get(systemIndex);
 			final ModelReader<Formula> fmReader = new ModelReader<>();
 			fmReader.setPathToFiles(config.modelPath);
-//			fmReader.setFormatSupplier(FormatSupplier.of(new XmlFeatureModelFormat()));
 			fmReader.setFormatSupplier(FormatSupplier.of(new KConfigReaderFormat()));
-			final Formula formula = fmReader.read(systemName).orElseThrow(p -> new RuntimeException(
-				"no feature model"));
+			final Formula formula = fmReader.read(systemName)
+					.orElseThrow(p -> new RuntimeException("no feature model"));
 			for (int i = 0; i < config.systemIterations.getValue(); i++) {
-//				Logger.logInfo("Distributive Transform");
-//				transformToCNF(systemName, formula, i, CCNFProvider.fromFormula(), CNFProvider.fromFormula(),
-//					"distrib");
-				Logger.logInfo("Tseytin Transform");
-				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(0), CNFProvider
-					.fromTseytinFormula(), "tseytin");
-				Logger.logInfo("Hybrid Tseytin Transform");
-				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(1), CNFProvider
-					.fromTseytinFormula(), "hybrid1");
-				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(10), CNFProvider
-					.fromTseytinFormula(), "hybrid10");
-				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(100), CNFProvider
-					.fromTseytinFormula(), "hybrid100");
-				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(1_000), CNFProvider
-					.fromTseytinFormula(), "hybrid1_000");
-				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(10_000), CNFProvider
-					.fromTseytinFormula(), "hybrid10_000");
-				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(100_000), CNFProvider
-					.fromTseytinFormula(), "hybrid100_000");
+				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(),
+						CNFProvider.fromTseytinFormula(), "tseytin");
+				for (int maximumNumberOfClauses = 1; maximumNumberOfClauses <= 100_000; maximumNumberOfClauses *= 10) {
+					for (int maximumLengthOfClauses = 1; maximumLengthOfClauses <= 100_000; maximumLengthOfClauses *= 10) {
+						transformToCNF(systemName, formula, i,
+								FormulaProvider.TseytinCNF.fromFormula(maximumNumberOfClauses, maximumLengthOfClauses),
+								CNFProvider.fromTseytinFormula(),
+								"hybrid(" + maximumNumberOfClauses + "/" + maximumLengthOfClauses + ")");
+					}
+				}
+				transformToCNF(systemName, formula, i, FormulaProvider.CNF.fromFormula(),
+						CNFProvider.fromTseytinFormula(), "distrib");
 			}
 			tabFormatter.decTabLevel();
 		}
