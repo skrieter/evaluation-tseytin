@@ -37,8 +37,9 @@ import org.spldev.util.io.csv.*;
 import org.spldev.util.io.format.*;
 
 /**
- * Evaluate the (hybrid) Tseitin transformation. This assumes that input formulas
- * are in a "partial" CNF (i.e., already a conjunction of some formulas).
+ * Evaluate the (hybrid) Tseitin transformation. This assumes that input
+ * formulas are in a "partial" CNF (i.e., already a conjunction of some
+ * formulas).
  */
 public class TseytinEvaluator extends Evaluator {
 	protected CSVWriter writer;
@@ -75,20 +76,20 @@ public class TseytinEvaluator extends Evaluator {
 			fmReader.setPathToFiles(config.modelPath);
 			fmReader.setFormatSupplier(FormatSupplier.of(new KConfigReaderFormat()));
 			final Formula formula = fmReader.read(systemName)
-					.orElseThrow(p -> new RuntimeException("no feature model"));
+				.orElseThrow(p -> new RuntimeException("no feature model"));
 			for (int i = 0; i < config.systemIterations.getValue(); i++) {
 				transformToCNF(systemName, formula, i, FormulaProvider.TseytinCNF.fromFormula(),
-						CNFProvider.fromTseytinFormula(), "tseytin");
+					CNFProvider.fromTseytinFormula(), "tseytin");
 				for (int maximumNumberOfClauses = 1; maximumNumberOfClauses <= 100_000; maximumNumberOfClauses *= 10) {
 					for (int maximumLengthOfClauses = 1; maximumLengthOfClauses <= 100_000; maximumLengthOfClauses *= 10) {
 						transformToCNF(systemName, formula, i,
-								FormulaProvider.TseytinCNF.fromFormula(maximumNumberOfClauses, maximumLengthOfClauses),
-								CNFProvider.fromTseytinFormula(),
-								"hybrid(" + maximumNumberOfClauses + "/" + maximumLengthOfClauses + ")");
+							FormulaProvider.TseytinCNF.fromFormula(maximumNumberOfClauses, maximumLengthOfClauses),
+							CNFProvider.fromTseytinFormula(),
+							"hybrid(" + maximumNumberOfClauses + "/" + maximumLengthOfClauses + ")");
 					}
 				}
 				transformToCNF(systemName, formula, i, FormulaProvider.CNF.fromFormula(),
-						CNFProvider.fromTseytinFormula(), "distrib");
+					CNFProvider.fromTseytinFormula(), "distrib");
 			}
 			tabFormatter.decTabLevel();
 		}
