@@ -33,10 +33,8 @@ import org.spldev.formula.expression.*;
 import org.spldev.formula.expression.atomic.literal.*;
 import org.spldev.formula.expression.io.parse.*;
 import org.spldev.util.*;
-import org.spldev.util.extension.*;
 import org.spldev.util.io.csv.*;
 import org.spldev.util.io.format.*;
-import org.spldev.util.logging.*;
 
 /**
  * Evaluate the (hybrid) Tseitin transformation. This assumes that input formulas
