@@ -11,3 +11,4 @@ models/
 *.jar*
 config
 output
+results
