@@ -34,17 +34,12 @@ import org.spldev.formula.expression.atomic.literal.VariableMap;
 import org.spldev.formula.expression.io.parse.KConfigReaderFormat;
 import org.spldev.formula.expression.transform.CNFTseytinTransformer;
 import org.spldev.util.Provider;
-import org.spldev.util.data.Pair;
 import org.spldev.util.io.csv.CSVWriter;
 import org.spldev.util.io.format.FormatSupplier;
-import org.spldev.util.logging.Logger;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.OptionalDouble;
-import java.util.function.Function;
 
 /**
  * Evaluate the (hybrid) Tseitin transformation. This assumes that input
@@ -118,7 +113,6 @@ public class TseytinEvaluator extends Evaluator {
 			logSystem();
 			tabFormatter.incTabLevel();
 			final String systemName = config.systemNames.get(systemIndex);
-			HashMap<Pair<Integer, Integer>, ResultLine> resultMatrix = new HashMap<>();
 			final ModelReader<Formula> fmReader = new ModelReader<>();
 			fmReader.setPathToFiles(config.modelPath);
 			fmReader.setFormatSupplier(FormatSupplier.of(new KConfigReaderFormat()));
@@ -133,17 +127,10 @@ public class TseytinEvaluator extends Evaluator {
 							FormulaProvider.TseytinCNF.fromFormula(maxNumValue, maxLenValue),
 							CNFProvider.fromTseytinFormula(), maxNumValue, maxLenValue));
 					}
-					ResultLine resultLine = ResultLine.reduce(resultLines);
-					resultLine.print(writer);
-					resultMatrix.put(new Pair<>(maxNumValue, maxLenValue), resultLine);
+					ResultLine.reduce(resultLines).print(writer);
 				}
 			}
 			tabFormatter.decTabLevel();
-			writeMatrix(resultMatrix, systemName, "TransformTime", resultLine -> resultLine.transformTime);
-			writeMatrix(resultMatrix, systemName, "AnalysisTime", resultLine -> resultLine.analysisTime);
-			writeMatrix(resultMatrix, systemName, "Variables", resultLine -> (long) resultLine.variables);
-			writeMatrix(resultMatrix, systemName, "Clauses", resultLine -> (long) resultLine.clauses);
-			writeMatrix(resultMatrix, systemName, "TseytinClauses", resultLine -> (long) resultLine.tseytinClauses);
 		}
 	}
 
@@ -183,24 +170,5 @@ public class TseytinEvaluator extends Evaluator {
 		final HasSolutionAnalysis hasSolutionAnalysis = new HasSolutionAnalysis();
 		hasSolutionAnalysis.setSolverInputProvider(cnfProvider);
 		hasSolutionAnalysis.getResult(modelRepresentation).get();
-	}
-
-	private void writeMatrix(HashMap<Pair<Integer, Integer>, ResultLine> resultMatrix,
-		String systemName, String metric, Function<ResultLine, Long> metricFn) {
-		final CSVWriter csvWriter = new CSVWriter();
-		try {
-			csvWriter.setOutputDirectory(config.csvPath);
-			csvWriter.setFileName(metric + "/" + systemName.replace("/", "_").replace(".kconfigreader.model", "")
-				+ ".csv");
-			for (int maxNumValue : maxNumValues) {
-				csvWriter.createNewLine();
-				for (int maxLenValue : maxLenValues) {
-					csvWriter.addValue(metricFn.apply(resultMatrix.get(new Pair<>(maxNumValue, maxLenValue))));
-				}
-				csvWriter.flush();
-			}
-		} catch (final IOException e) {
-			Logger.logError(e);
-		}
 	}
 }
