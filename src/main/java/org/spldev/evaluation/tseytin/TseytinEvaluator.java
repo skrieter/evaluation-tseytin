@@ -22,22 +22,29 @@
  */
 package org.spldev.evaluation.tseytin;
 
-import java.util.*;
-
-import org.spldev.evaluation.*;
-import org.spldev.evaluation.util.*;
-import org.spldev.formula.*;
-import org.spldev.formula.analysis.sat4j.*;
-import org.spldev.formula.clauses.*;
-import org.spldev.formula.expression.*;
-import org.spldev.formula.expression.atomic.literal.*;
-import org.spldev.formula.expression.io.parse.*;
+import org.spldev.evaluation.Evaluator;
+import org.spldev.evaluation.util.ModelReader;
+import org.spldev.formula.ModelRepresentation;
+import org.spldev.formula.analysis.sat4j.HasSolutionAnalysis;
+import org.spldev.formula.clauses.CNF;
+import org.spldev.formula.clauses.CNFProvider;
+import org.spldev.formula.expression.Formula;
+import org.spldev.formula.expression.FormulaProvider;
+import org.spldev.formula.expression.atomic.literal.VariableMap;
+import org.spldev.formula.expression.io.parse.KConfigReaderFormat;
 import org.spldev.formula.expression.transform.CNFTseytinTransformer;
-import org.spldev.util.*;
-import org.spldev.util.extension.*;
-import org.spldev.util.io.csv.*;
-import org.spldev.util.io.format.*;
-import org.spldev.util.logging.*;
+import org.spldev.util.Provider;
+import org.spldev.util.data.Pair;
+import org.spldev.util.io.csv.CSVWriter;
+import org.spldev.util.io.format.FormatSupplier;
+import org.spldev.util.logging.Logger;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.OptionalDouble;
+import java.util.function.Function;
 
 /**
  * Evaluate the (hybrid) Tseitin transformation. This assumes that input
@@ -46,6 +53,9 @@ import org.spldev.util.logging.*;
  */
 public class TseytinEvaluator extends Evaluator {
 	protected CSVWriter writer;
+
+	int[] maxNumValues = { 1, 10, 100, 1000, 10000 };
+	int[] maxLenValues = { 1, 10, 100, 1000, 10000 };
 
 	private static class ResultLine {
 		String system;
@@ -98,7 +108,6 @@ public class TseytinEvaluator extends Evaluator {
 		super.addCSVWriters();
 		writer = addCSVWriter("evaluation.csv", Arrays.asList("System", "MaxNumOfClauses", "MaxLenOfClauses",
 			"TransformTime", "AnalysisTime", "Variables", "Clauses", "TseytinClauses"));
-		// TODO Matrix: clauses to metrics
 	}
 
 	@Override
@@ -109,24 +118,32 @@ public class TseytinEvaluator extends Evaluator {
 			logSystem();
 			tabFormatter.incTabLevel();
 			final String systemName = config.systemNames.get(systemIndex);
+			HashMap<Pair<Integer, Integer>, ResultLine> resultMatrix = new HashMap<>();
 			final ModelReader<Formula> fmReader = new ModelReader<>();
 			fmReader.setPathToFiles(config.modelPath);
 			fmReader.setFormatSupplier(FormatSupplier.of(new KConfigReaderFormat()));
 			final Formula formula = fmReader.read(systemName)
 				.orElseThrow(p -> new RuntimeException("no feature model"));
 			warmUpRun(formula, FormulaProvider.TseytinCNF.fromFormula(), CNFProvider.fromTseytinFormula());
-			for (int maximumNumberOfClauses = 1; maximumNumberOfClauses <= 100_000; maximumNumberOfClauses *= 10) {
-				for (int maximumLengthOfClauses = 1; maximumLengthOfClauses <= 100_000; maximumLengthOfClauses *= 10) {
+			for (int maxNumValue : maxNumValues) {
+				for (int maxLenValue : maxLenValues) {
 					ArrayList<ResultLine> resultLines = new ArrayList<>();
 					for (int i = 0; i < config.systemIterations.getValue(); i++) {
 						resultLines.add(transformToCNF(systemName, formula,
-							FormulaProvider.TseytinCNF.fromFormula(maximumNumberOfClauses, maximumLengthOfClauses),
-							CNFProvider.fromTseytinFormula(), maximumNumberOfClauses, maximumLengthOfClauses));
+							FormulaProvider.TseytinCNF.fromFormula(maxNumValue, maxLenValue),
+							CNFProvider.fromTseytinFormula(), maxNumValue, maxLenValue));
 					}
-					ResultLine.reduce(resultLines).print(writer);
+					ResultLine resultLine = ResultLine.reduce(resultLines);
+					resultLine.print(writer);
+					resultMatrix.put(new Pair<>(maxNumValue, maxLenValue), resultLine);
 				}
 			}
 			tabFormatter.decTabLevel();
+			writeMatrix(resultMatrix, systemName, "TransformTime", resultLine -> resultLine.transformTime);
+			writeMatrix(resultMatrix, systemName, "AnalysisTime", resultLine -> resultLine.analysisTime);
+			writeMatrix(resultMatrix, systemName, "Variables", resultLine -> (long) resultLine.variables);
+			writeMatrix(resultMatrix, systemName, "Clauses", resultLine -> (long) resultLine.clauses);
+			writeMatrix(resultMatrix, systemName, "TseytinClauses", resultLine -> (long) resultLine.tseytinClauses);
 		}
 	}
 
@@ -166,5 +183,24 @@ public class TseytinEvaluator extends Evaluator {
 		final HasSolutionAnalysis hasSolutionAnalysis = new HasSolutionAnalysis();
 		hasSolutionAnalysis.setSolverInputProvider(cnfProvider);
 		hasSolutionAnalysis.getResult(modelRepresentation).get();
+	}
+
+	private void writeMatrix(HashMap<Pair<Integer, Integer>, ResultLine> resultMatrix,
+		String systemName, String metric, Function<ResultLine, Long> metricFn) {
+		final CSVWriter csvWriter = new CSVWriter();
+		try {
+			csvWriter.setOutputDirectory(config.csvPath);
+			csvWriter.setFileName(metric + "/" + systemName.replace("/", "_").replace(".kconfigreader.model", "")
+				+ ".csv");
+			for (int maxNumValue : maxNumValues) {
+				csvWriter.createNewLine();
+				for (int maxLenValue : maxLenValues) {
+					csvWriter.addValue(metricFn.apply(resultMatrix.get(new Pair<>(maxNumValue, maxLenValue))));
+				}
+				csvWriter.flush();
+			}
+		} catch (final IOException e) {
+			Logger.logError(e);
+		}
 	}
 }
