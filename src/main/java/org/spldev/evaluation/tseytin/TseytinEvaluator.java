@@ -22,10 +22,10 @@
  */
 package org.spldev.evaluation.tseytin;
 
-import java.math.*;
 import java.util.*;
 
 import org.spldev.evaluation.*;
+import org.spldev.evaluation.properties.*;
 import org.spldev.evaluation.util.*;
 import org.spldev.formula.*;
 import org.spldev.formula.analysis.sat4j.*;
@@ -41,54 +41,14 @@ import org.spldev.util.io.format.*;
 import org.spldev.util.logging.*;
 
 /**
- * Evaluate the (hybrid) Tseitin transformation. This assumes that input
+ * Evaluate the (hybrid) Tseytin transformation. This assumes that input
  * formulas are in a "partial" CNF (i.e., already a conjunction of some
  * formulas).
  */
 public class TseytinEvaluator extends Evaluator {
 	protected CSVWriter writer;
-
-	int[] maxNumValues = { 1, 10, 100, 1000, 10000 };
-	int[] maxLenValues = { 1, 10, 100, 1000, 10000 };
-
-	private static class ResultLine {
-		String system;
-		long transformTime, analysisTime;
-		int maxNumOfClauses, maxLenOfClauses, variables, clauses, tseytinClauses;
-		BigInteger solutionCount;
-
-		static ResultLine reduce(ArrayList<ResultLine> resultLines) {
-			ResultLine resultLine = new ResultLine();
-			OptionalDouble averageTransformTime = resultLines.stream().map(_resultLine -> _resultLine.transformTime)
-				.mapToLong(Long::longValue).average();
-			OptionalDouble averageAnalysisTime = resultLines.stream().map(_resultLine -> _resultLine.analysisTime)
-				.mapToLong(Long::longValue).average();
-			resultLine.system = resultLines.get(0).system;
-			resultLine.transformTime = (long) averageTransformTime.orElse(0);
-			resultLine.analysisTime = (long) averageAnalysisTime.orElse(0);
-			resultLine.maxNumOfClauses = resultLines.get(0).maxNumOfClauses;
-			resultLine.maxLenOfClauses = resultLines.get(0).maxLenOfClauses;
-			resultLine.variables = resultLines.get(0).variables;
-			resultLine.clauses = resultLines.get(0).clauses;
-			resultLine.tseytinClauses = resultLines.get(0).tseytinClauses;
-			resultLine.solutionCount = resultLines.get(0).solutionCount;
-			return resultLine;
-		}
-
-		private void print(CSVWriter writer) {
-			writer.createNewLine();
-			writer.addValue(system);
-			writer.addValue(maxNumOfClauses);
-			writer.addValue(maxLenOfClauses);
-			writer.addValue(transformTime);
-			writer.addValue(analysisTime);
-			writer.addValue(variables);
-			writer.addValue(clauses);
-			writer.addValue(tseytinClauses);
-			writer.addValue(solutionCount);
-			writer.flush();
-		}
-	}
+	protected static final ListProperty<Integer> maxNumValues = new ListProperty<>("maxNum", Property.IntegerConverter);
+	protected static final ListProperty<Integer> maxLenValues = new ListProperty<>("maxLen", Property.IntegerConverter);
 
 	@Override
 	public String getId() {
@@ -103,8 +63,9 @@ public class TseytinEvaluator extends Evaluator {
 	@Override
 	protected void addCSVWriters() {
 		super.addCSVWriters();
-		writer = addCSVWriter("evaluation.csv", Arrays.asList("System", "MaxNumOfClauses", "MaxLenOfClauses",
-			"TransformTime", "AnalysisTime", "Variables", "Clauses", "TseytinClauses", "SolutionCount"));
+		writer = addCSVWriter("evaluation.csv",
+			Arrays.asList("System", "Features", "Constraints", "SolutionCount", "MaxNumOfClauses", "MaxLenOfClauses",
+				"TransformTime", "AnalysisTime", "Variables", "Clauses", "TseytinClauses"));
 	}
 
 	@Override
@@ -120,58 +81,56 @@ public class TseytinEvaluator extends Evaluator {
 			final String systemName = config.systemNames.get(systemIndex);
 			final Formula formula = fmReader.read(systemName)
 				.orElseThrow(p -> new RuntimeException("no feature model"));
-			warmUpRun(formula, FormulaProvider.TseytinCNF.fromFormula(), CNFProvider.fromTseytinFormula());
-			for (int maxNumValue : maxNumValues) {
-				for (int maxLenValue : maxLenValues) {
-					ArrayList<ResultLine> resultLines = new ArrayList<>();
+			for (int maxNumValue : maxNumValues.getValue()) {
+				for (int maxLenValue : maxLenValues.getValue()) {
 					for (int i = 0; i < config.systemIterations.getValue(); i++) {
-						resultLines.add(transformToCNF(systemName, formula,
+						transformToCNF(systemName, i, formula,
 							FormulaProvider.TseytinCNF.fromFormula(maxNumValue, maxLenValue),
-							CNFProvider.fromTseytinFormula(), maxNumValue, maxLenValue));
+							CNFProvider.fromTseytinFormula(), maxNumValue, maxLenValue);
 					}
-					ResultLine.reduce(resultLines).print(writer);
 				}
 			}
 			tabFormatter.decTabLevel();
 		}
 	}
 
-	private ResultLine transformToCNF(String systemName, Formula formula, Provider<Formula> transformer,
+	private void transformToCNF(String systemName, int i, Formula formula, Provider<Formula> transformer,
 		Provider<CNF> cnfProvider, int maximumNumberOfClauses, int maximumLengthOfClauses) {
-		System.out.printf("Running for %s and maxNum=%d, maxLen=%d\n", systemName, maximumNumberOfClauses,
-			maximumLengthOfClauses);
-		ResultLine resultLine = new ResultLine();
-		resultLine.system = systemName;
-		resultLine.maxNumOfClauses = maximumNumberOfClauses;
-		resultLine.maxLenOfClauses = maximumLengthOfClauses;
+		try {
+			writer.createNewLine();
+			Logger.logInfo(String.format("Running for %s and maxNum=%d, maxLen=%d\n",
+				systemName, maximumNumberOfClauses, maximumLengthOfClauses));
+			// separate csv with system,variables etc.
+			final ModelRepresentation rep = new ModelRepresentation(formula);
 
-		long localTime, timeNeeded;
-		final ModelRepresentation rep = new ModelRepresentation(formula);
+			writer.addValue(systemName);
+			writer.addValue(rep.getVariables().size());
+			writer.addValue(NormalForms.simplifyForNF(rep.getFormula()).getChildren().size());
+			writer.addValue(new CountSolutionsAnalysis().getResult(rep).orElse(Logger::logProblems));
+			writer.addValue(maximumNumberOfClauses);
+			writer.addValue(maximumLengthOfClauses);
 
-		localTime = System.nanoTime();
-		formula = rep.get(transformer);
-		timeNeeded = System.nanoTime() - localTime;
-		resultLine.transformTime = timeNeeded;
+			long localTime, timeNeeded;
 
-		localTime = System.nanoTime();
-		final HasSolutionAnalysis hasSolutionAnalysis = new HasSolutionAnalysis();
-		hasSolutionAnalysis.setSolverInputProvider(cnfProvider);
-		hasSolutionAnalysis.getResult(rep).orElse(Logger::logProblems);
-		timeNeeded = System.nanoTime() - localTime;
-		resultLine.analysisTime = timeNeeded;
+			localTime = System.nanoTime();
+			formula = rep.get(transformer);
+			timeNeeded = System.nanoTime() - localTime;
+			writer.addValue(timeNeeded);
 
-		resultLine.variables = VariableMap.fromExpression(formula).size();
-		resultLine.clauses = formula.getChildren().size();
-		resultLine.tseytinClauses = CNFTseytinTransformer.getNumberOfTseytinTransformedClauses();
-		resultLine.solutionCount = new CountSolutionsAnalysis().getResult(rep).orElse(Logger::logProblems);
-		return resultLine;
-	}
+			localTime = System.nanoTime();
+			final HasSolutionAnalysis hasSolutionAnalysis = new HasSolutionAnalysis();
+			hasSolutionAnalysis.setSolverInputProvider(cnfProvider);
+			hasSolutionAnalysis.getResult(rep).get();
+			timeNeeded = System.nanoTime() - localTime;
+			writer.addValue(timeNeeded);
 
-	private void warmUpRun(Formula formula, Provider<Formula> transformer, Provider<CNF> cnfProvider) {
-		ModelRepresentation modelRepresentation = new ModelRepresentation(formula);
-		modelRepresentation.get(transformer);
-		final HasSolutionAnalysis hasSolutionAnalysis = new HasSolutionAnalysis();
-		hasSolutionAnalysis.setSolverInputProvider(cnfProvider);
-		hasSolutionAnalysis.getResult(modelRepresentation).get();
+			writer.addValue(VariableMap.fromExpression(formula).size());
+			writer.addValue(formula.getChildren().size());
+			writer.addValue(CNFTseytinTransformer.getNumberOfTseytinTransformedClauses());
+			rep.getCache().reset();
+		} finally {
+			writer.flush();
+			System.gc();
+		}
 	}
 }
