@@ -22,26 +22,23 @@
  */
 package org.spldev.evaluation.tseytin;
 
-import org.spldev.evaluation.Evaluator;
-import org.spldev.evaluation.properties.ListProperty;
-import org.spldev.evaluation.properties.Property;
-import org.spldev.evaluation.util.ModelReader;
-import org.spldev.formula.ModelRepresentation;
-import org.spldev.formula.analysis.sat4j.HasSolutionAnalysis;
-import org.spldev.formula.clauses.CNF;
-import org.spldev.formula.clauses.CNFProvider;
-import org.spldev.formula.expression.Formula;
-import org.spldev.formula.expression.FormulaProvider;
-import org.spldev.formula.expression.atomic.literal.VariableMap;
-import org.spldev.formula.expression.io.parse.KConfigReaderFormat;
-import org.spldev.formula.expression.transform.CNFTseytinTransformer;
-import org.spldev.formula.expression.transform.NormalForms;
-import org.spldev.util.Provider;
-import org.spldev.util.io.csv.CSVWriter;
-import org.spldev.util.io.format.FormatSupplier;
-import org.spldev.util.logging.Logger;
+import java.util.*;
 
-import java.util.Arrays;
+import org.spldev.evaluation.*;
+import org.spldev.evaluation.properties.*;
+import org.spldev.evaluation.util.*;
+import org.spldev.formula.*;
+import org.spldev.formula.analysis.sat4j.*;
+import org.spldev.formula.analysis.sharpsat.CountSolutionsAnalysis;
+import org.spldev.formula.clauses.*;
+import org.spldev.formula.expression.*;
+import org.spldev.formula.expression.atomic.literal.*;
+import org.spldev.formula.expression.io.parse.*;
+import org.spldev.formula.expression.transform.*;
+import org.spldev.util.*;
+import org.spldev.util.io.csv.*;
+import org.spldev.util.io.format.*;
+import org.spldev.util.logging.*;
 
 /**
  * Evaluate the (hybrid) Tseytin transformation. This assumes that input
@@ -70,20 +67,20 @@ public class TseytinEvaluator extends Evaluator {
 			Arrays.asList("ID", "MaxNumOfClauses", "MaxLenOfClauses", "Iteration",
 				"TransformTime", "SatTime", "SharpSatTime", "Variables", "Clauses", "TseytinClauses"));
 		systemWriter = addCSVWriter("systems.csv", Arrays.asList("ID", "System", "Features", "Constraints",
-			"SharpSat"));
+			"Solutions"));
 	}
 
 	@Override
 	public void evaluate() {
 		tabFormatter.setTabLevel(0);
 		final int systemIndexEnd = config.systemNames.size();
+		final ModelReader<Formula> fmReader = new ModelReader<>();
+		fmReader.setPathToFiles(config.modelPath);
+		fmReader.setFormatSupplier(FormatSupplier.of(new KConfigReaderFormat()));
 		for (systemIndex = 0; systemIndex < systemIndexEnd; systemIndex++) {
 			final String systemName = config.systemNames.get(systemIndex);
 			logSystem();
 			tabFormatter.incTabLevel();
-			final ModelReader<Formula> fmReader = new ModelReader<>();
-			fmReader.setPathToFiles(config.modelPath);
-			fmReader.setFormatSupplier(FormatSupplier.of(new KConfigReaderFormat()));
 			final Formula formula = fmReader.read(systemName)
 				.orElseThrow(p -> new RuntimeException("no feature model"));
 			systemWriter.createNewLine();
@@ -116,6 +113,7 @@ public class TseytinEvaluator extends Evaluator {
 			writer.createNewLine();
 			Logger.logInfo(String.format("Running for %s and maxNum=%d, maxLen=%d",
 				systemName, maximumNumberOfClauses, maximumLengthOfClauses));
+
 			writer.addValue(systemIndex);
 			writer.addValue(maximumNumberOfClauses);
 			writer.addValue(maximumLengthOfClauses);
@@ -136,16 +134,7 @@ public class TseytinEvaluator extends Evaluator {
 			timeNeeded = System.nanoTime() - localTime;
 			writer.addValue(timeNeeded);
 
-			/*
-			 * localTime = System.nanoTime(); final CountSolutionsAnalysis
-			 * countSolutionsAnalysis = new CountSolutionsAnalysis();
-			 * countSolutionsAnalysis.setSolverInputProvider(transformer); // TODO cannot
-			 * pass cnfProvider here, is that // intentional?
-			 * (countSolutionsAnalysis.getResult(rep).orElse(Logger:: logProblems));
-			 * timeNeeded = System.nanoTime() - localTime; writer.addValue(timeNeeded);
-			 */
-			writer.addValue(0);
-
+			writer.addValue(new CountSolutionsAnalysis().getResult(rep).orElse(Logger::logProblems));
 			writer.addValue(VariableMap.fromExpression(formula).size());
 			writer.addValue(formula.getChildren().size());
 			writer.addValue(transformer.getNumberOfTseytinTransformedClauses());
