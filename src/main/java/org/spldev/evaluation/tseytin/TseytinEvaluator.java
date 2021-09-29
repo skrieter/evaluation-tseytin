@@ -22,24 +22,23 @@
  */
 package org.spldev.evaluation.tseytin;
 
-import org.spldev.evaluation.Evaluator;
-import org.spldev.evaluation.util.ModelReader;
-import org.spldev.formula.ModelRepresentation;
-import org.spldev.formula.analysis.sat4j.HasSolutionAnalysis;
-import org.spldev.formula.clauses.CNF;
-import org.spldev.formula.clauses.CNFProvider;
-import org.spldev.formula.expression.Formula;
-import org.spldev.formula.expression.FormulaProvider;
-import org.spldev.formula.expression.atomic.literal.VariableMap;
-import org.spldev.formula.expression.io.parse.KConfigReaderFormat;
-import org.spldev.formula.expression.transform.CNFTseytinTransformer;
-import org.spldev.util.Provider;
-import org.spldev.util.io.csv.CSVWriter;
-import org.spldev.util.io.format.FormatSupplier;
+import java.math.*;
+import java.util.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.OptionalDouble;
+import org.spldev.evaluation.*;
+import org.spldev.evaluation.util.*;
+import org.spldev.formula.*;
+import org.spldev.formula.analysis.sat4j.*;
+import org.spldev.formula.analysis.sharpsat.CountSolutionsAnalysis;
+import org.spldev.formula.clauses.*;
+import org.spldev.formula.expression.*;
+import org.spldev.formula.expression.atomic.literal.*;
+import org.spldev.formula.expression.io.parse.*;
+import org.spldev.formula.expression.transform.*;
+import org.spldev.util.*;
+import org.spldev.util.io.csv.*;
+import org.spldev.util.io.format.*;
+import org.spldev.util.logging.*;
 
 /**
  * Evaluate the (hybrid) Tseitin transformation. This assumes that input
@@ -56,6 +55,7 @@ public class TseytinEvaluator extends Evaluator {
 		String system;
 		long transformTime, analysisTime;
 		int maxNumOfClauses, maxLenOfClauses, variables, clauses, tseytinClauses;
+		BigInteger solutionCount;
 
 		static ResultLine reduce(ArrayList<ResultLine> resultLines) {
 			ResultLine resultLine = new ResultLine();
@@ -71,6 +71,7 @@ public class TseytinEvaluator extends Evaluator {
 			resultLine.variables = resultLines.get(0).variables;
 			resultLine.clauses = resultLines.get(0).clauses;
 			resultLine.tseytinClauses = resultLines.get(0).tseytinClauses;
+			resultLine.solutionCount = resultLines.get(0).solutionCount;
 			return resultLine;
 		}
 
@@ -84,6 +85,7 @@ public class TseytinEvaluator extends Evaluator {
 			writer.addValue(variables);
 			writer.addValue(clauses);
 			writer.addValue(tseytinClauses);
+			writer.addValue(solutionCount);
 			writer.flush();
 		}
 	}
@@ -102,20 +104,20 @@ public class TseytinEvaluator extends Evaluator {
 	protected void addCSVWriters() {
 		super.addCSVWriters();
 		writer = addCSVWriter("evaluation.csv", Arrays.asList("System", "MaxNumOfClauses", "MaxLenOfClauses",
-			"TransformTime", "AnalysisTime", "Variables", "Clauses", "TseytinClauses"));
+			"TransformTime", "AnalysisTime", "Variables", "Clauses", "TseytinClauses", "SolutionCount"));
 	}
 
 	@Override
 	public void evaluate() {
 		tabFormatter.setTabLevel(0);
 		final int systemIndexEnd = config.systemNames.size();
+		final ModelReader<Formula> fmReader = new ModelReader<>();
+		fmReader.setPathToFiles(config.modelPath);
+		fmReader.setFormatSupplier(FormatSupplier.of(new KConfigReaderFormat()));
 		for (systemIndex = 0; systemIndex < systemIndexEnd; systemIndex++) {
 			logSystem();
 			tabFormatter.incTabLevel();
 			final String systemName = config.systemNames.get(systemIndex);
-			final ModelReader<Formula> fmReader = new ModelReader<>();
-			fmReader.setPathToFiles(config.modelPath);
-			fmReader.setFormatSupplier(FormatSupplier.of(new KConfigReaderFormat()));
 			final Formula formula = fmReader.read(systemName)
 				.orElseThrow(p -> new RuntimeException("no feature model"));
 			warmUpRun(formula, FormulaProvider.TseytinCNF.fromFormula(), CNFProvider.fromTseytinFormula());
@@ -154,13 +156,14 @@ public class TseytinEvaluator extends Evaluator {
 		localTime = System.nanoTime();
 		final HasSolutionAnalysis hasSolutionAnalysis = new HasSolutionAnalysis();
 		hasSolutionAnalysis.setSolverInputProvider(cnfProvider);
-		hasSolutionAnalysis.getResult(rep).get();
+		hasSolutionAnalysis.getResult(rep).orElse(Logger::logProblems);
 		timeNeeded = System.nanoTime() - localTime;
 		resultLine.analysisTime = timeNeeded;
 
 		resultLine.variables = VariableMap.fromExpression(formula).size();
 		resultLine.clauses = formula.getChildren().size();
 		resultLine.tseytinClauses = CNFTseytinTransformer.getNumberOfTseytinTransformedClauses();
+		resultLine.solutionCount = new CountSolutionsAnalysis().getResult(rep).orElse(Logger::logProblems);
 		return resultLine;
 	}
 
