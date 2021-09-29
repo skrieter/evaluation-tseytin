@@ -46,7 +46,7 @@ import org.spldev.util.logging.*;
  * formulas).
  */
 public class TseytinEvaluator extends Evaluator {
-	protected CSVWriter writer;
+	protected CSVWriter writer, systemWriter;
 	protected static final ListProperty<Integer> maxNumValues = new ListProperty<>("maxNum", Property.IntegerConverter);
 	protected static final ListProperty<Integer> maxLenValues = new ListProperty<>("maxLen", Property.IntegerConverter);
 
@@ -64,8 +64,10 @@ public class TseytinEvaluator extends Evaluator {
 	protected void addCSVWriters() {
 		super.addCSVWriters();
 		writer = addCSVWriter("evaluation.csv",
-			Arrays.asList("System", "Features", "Constraints", "SolutionCount", "MaxNumOfClauses", "MaxLenOfClauses",
-				"TransformTime", "AnalysisTime", "Variables", "Clauses", "TseytinClauses"));
+			Arrays.asList("ID", "MaxNumOfClauses", "MaxLenOfClauses", "Iteration",
+				"TransformTime", "SatTime", "SharpSatTime", "Variables", "Clauses", "TseytinClauses"));
+		systemWriter = addCSVWriter("systems.csv", Arrays.asList("ID", "System", "Features", "Constraints",
+			"Solutions"));
 	}
 
 	@Override
@@ -76,11 +78,18 @@ public class TseytinEvaluator extends Evaluator {
 		fmReader.setPathToFiles(config.modelPath);
 		fmReader.setFormatSupplier(FormatSupplier.of(new KConfigReaderFormat()));
 		for (systemIndex = 0; systemIndex < systemIndexEnd; systemIndex++) {
+			final String systemName = config.systemNames.get(systemIndex);
 			logSystem();
 			tabFormatter.incTabLevel();
-			final String systemName = config.systemNames.get(systemIndex);
 			final Formula formula = fmReader.read(systemName)
 				.orElseThrow(p -> new RuntimeException("no feature model"));
+			systemWriter.createNewLine();
+			systemWriter.addValue(systemIndex);
+			systemWriter.addValue(systemName);
+			systemWriter.addValue(VariableMap.fromExpression(formula).size());
+			systemWriter.addValue(NormalForms.simplifyForNF(formula).getChildren().size());
+			systemWriter.addValue(0);
+			systemWriter.flush();
 			for (int maxNumValue : maxNumValues.getValue()) {
 				for (int maxLenValue : maxLenValues.getValue()) {
 					for (int i = 0; i < config.systemIterations.getValue(); i++) {
@@ -98,19 +107,16 @@ public class TseytinEvaluator extends Evaluator {
 		Provider<CNF> cnfProvider, int maximumNumberOfClauses, int maximumLengthOfClauses) {
 		try {
 			writer.createNewLine();
-			Logger.logInfo(String.format("Running for %s and maxNum=%d, maxLen=%d\n",
+			Logger.logInfo(String.format("Running for %s and maxNum=%d, maxLen=%d",
 				systemName, maximumNumberOfClauses, maximumLengthOfClauses));
-			// separate csv with system,variables etc.
-			final ModelRepresentation rep = new ModelRepresentation(formula);
 
-			writer.addValue(systemName);
-			writer.addValue(rep.getVariables().size());
-			writer.addValue(NormalForms.simplifyForNF(rep.getFormula()).getChildren().size());
-			writer.addValue(new CountSolutionsAnalysis().getResult(rep).orElse(Logger::logProblems));
+			writer.addValue(systemIndex);
 			writer.addValue(maximumNumberOfClauses);
 			writer.addValue(maximumLengthOfClauses);
+			writer.addValue(i);
 
 			long localTime, timeNeeded;
+			final ModelRepresentation rep = new ModelRepresentation(formula);
 
 			localTime = System.nanoTime();
 			formula = rep.get(transformer);
@@ -124,6 +130,7 @@ public class TseytinEvaluator extends Evaluator {
 			timeNeeded = System.nanoTime() - localTime;
 			writer.addValue(timeNeeded);
 
+			writer.addValue(new CountSolutionsAnalysis().getResult(rep).orElse(Logger::logProblems));
 			writer.addValue(VariableMap.fromExpression(formula).size());
 			writer.addValue(formula.getChildren().size());
 			writer.addValue(CNFTseytinTransformer.getNumberOfTseytinTransformedClauses());
