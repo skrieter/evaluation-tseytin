@@ -9,6 +9,6 @@ misc/
 models/
 *.iml
 *.jar*
-config
 output
-results
+.Rhistory
+config/models.txt
