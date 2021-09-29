@@ -88,6 +88,9 @@ public class TseytinEvaluator extends Evaluator {
 			systemWriter.addValue(systemName);
 			systemWriter.addValue(VariableMap.fromExpression(formula).size());
 			systemWriter.addValue(NormalForms.simplifyForNF(formula).getChildren().size());
+			// systemWriter.addValue(new CountSolutionsAnalysis().getResult(new
+			// ModelRepresentation(formula)).orElse(
+			// Logger::logProblems));
 			systemWriter.addValue(0);
 			systemWriter.flush();
 			for (int maxNumValue : maxNumValues.getValue()) {
@@ -134,7 +137,12 @@ public class TseytinEvaluator extends Evaluator {
 			timeNeeded = System.nanoTime() - localTime;
 			writer.addValue(timeNeeded);
 
-			writer.addValue(new CountSolutionsAnalysis().getResult(rep).orElse(Logger::logProblems));
+//			localTime = System.nanoTime();
+//			new CountSolutionsAnalysis().getResult(rep).orElse(Logger::logProblems);
+//			timeNeeded = System.nanoTime() - localTime;
+//			writer.addValue(timeNeeded);
+			writer.addValue(0);
+
 			writer.addValue(VariableMap.fromExpression(formula).size());
 			writer.addValue(formula.getChildren().size());
 			writer.addValue(transformer.getNumberOfTseytinTransformedClauses());
