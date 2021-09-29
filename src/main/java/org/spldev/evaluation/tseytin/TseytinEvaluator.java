@@ -96,8 +96,11 @@ public class TseytinEvaluator extends Evaluator {
 			for (int maxNumValue : maxNumValues.getValue()) {
 				for (int maxLenValue : maxLenValues.getValue()) {
 					for (int i = 0; i < config.systemIterations.getValue(); i++) {
-						transformToCNF(systemName, i, formula,
-							FormulaProvider.TseytinCNF.fromFormula(maxNumValue, maxLenValue),
+						CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer(maxNumValue,
+							maxLenValue);
+						FormulaProvider.TseytinCNF formulaProvider = (c, m) -> Provider.convert(c,
+							FormulaProvider.identifier, transformer, m);
+						transformToCNF(systemName, i, formula, transformer, formulaProvider,
 							CNFProvider.fromTseytinFormula(), maxNumValue, maxLenValue);
 					}
 				}
@@ -106,8 +109,9 @@ public class TseytinEvaluator extends Evaluator {
 		}
 	}
 
-	private void transformToCNF(String systemName, int i, Formula formula, Provider<Formula> transformer,
-		Provider<CNF> cnfProvider, int maximumNumberOfClauses, int maximumLengthOfClauses) {
+	private void transformToCNF(String systemName, int i, Formula formula, CountingCNFTseytinTransformer transformer,
+		Provider<Formula> formulaProvider, Provider<CNF> cnfProvider, int maximumNumberOfClauses,
+		int maximumLengthOfClauses) {
 		try {
 			writer.createNewLine();
 			Logger.logInfo(String.format("Running for %s and maxNum=%d, maxLen=%d",
@@ -121,7 +125,7 @@ public class TseytinEvaluator extends Evaluator {
 			final ModelRepresentation rep = new ModelRepresentation(formula);
 
 			localTime = System.nanoTime();
-			formula = rep.get(transformer);
+			formula = rep.get(formulaProvider);
 			timeNeeded = System.nanoTime() - localTime;
 			writer.addValue(timeNeeded);
 
@@ -144,7 +148,7 @@ public class TseytinEvaluator extends Evaluator {
 
 			writer.addValue(VariableMap.fromExpression(formula).size());
 			writer.addValue(formula.getChildren().size());
-			writer.addValue(CNFTseytinTransformer.getNumberOfTseytinTransformedClauses());
+			writer.addValue(transformer.getNumberOfTseytinTransformedClauses());
 			rep.getCache().reset();
 		} finally {
 			writer.flush();
