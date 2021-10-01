@@ -22,23 +22,24 @@
  */
 package org.spldev.evaluation.tseytin;
 
-import java.util.*;
+import org.spldev.evaluation.Evaluator;
+import org.spldev.evaluation.process.ProcessRunner;
+import org.spldev.evaluation.process.Result;
+import org.spldev.evaluation.properties.ListProperty;
+import org.spldev.evaluation.properties.Property;
+import org.spldev.evaluation.util.ModelReader;
+import org.spldev.formula.expression.Formula;
+import org.spldev.formula.expression.atomic.literal.VariableMap;
+import org.spldev.formula.expression.io.parse.KConfigReaderFormat;
+import org.spldev.formula.expression.transform.NormalForms;
+import org.spldev.util.io.csv.CSVWriter;
+import org.spldev.util.io.format.FormatSupplier;
+import org.spldev.util.logging.Logger;
 
-import org.spldev.evaluation.*;
-import org.spldev.evaluation.properties.*;
-import org.spldev.evaluation.util.*;
-import org.spldev.formula.*;
-import org.spldev.formula.analysis.sat4j.*;
-import org.spldev.formula.analysis.sharpsat.CountSolutionsAnalysis;
-import org.spldev.formula.clauses.*;
-import org.spldev.formula.expression.*;
-import org.spldev.formula.expression.atomic.literal.*;
-import org.spldev.formula.expression.io.parse.*;
-import org.spldev.formula.expression.transform.*;
-import org.spldev.util.*;
-import org.spldev.util.io.csv.*;
-import org.spldev.util.io.format.*;
-import org.spldev.util.logging.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Evaluate the (hybrid) Tseytin transformation. This assumes that input
@@ -65,9 +66,9 @@ public class TseytinEvaluator extends Evaluator {
 		super.addCSVWriters();
 		writer = addCSVWriter("evaluation.csv",
 			Arrays.asList("ID", "MaxNumOfClauses", "MaxLenOfClauses", "Iteration",
-				"TransformTime", "SatTime", "SharpSatTime", "Variables", "Clauses", "TseytinClauses"));
-		systemWriter = addCSVWriter("systems.csv", Arrays.asList("ID", "System", "Features", "Constraints",
-			"Solutions"));
+				"TransformTime", "Variables", "Clauses", "TseytinClauses", "TseytinConstraints",
+				"SatTime", "Sat", "SharpSatTime", "SharpSat"));
+		systemWriter = addCSVWriter("systems.csv", Arrays.asList("ID", "System", "Features", "Constraints"));
 	}
 
 	@Override
@@ -77,31 +78,48 @@ public class TseytinEvaluator extends Evaluator {
 		final ModelReader<Formula> fmReader = new ModelReader<>();
 		fmReader.setPathToFiles(config.modelPath);
 		fmReader.setFormatSupplier(FormatSupplier.of(new KConfigReaderFormat()));
+		final ProcessRunner processRunner = new ProcessRunner();
+		processRunner.setTimeout(config.timeout.getValue());
 		for (systemIndex = 0; systemIndex < systemIndexEnd; systemIndex++) {
 			final String systemName = config.systemNames.get(systemIndex);
 			logSystem();
 			tabFormatter.incTabLevel();
-			final Formula formula = fmReader.read(systemName)
+			Formula formula = fmReader.read(systemName)
 				.orElseThrow(p -> new RuntimeException("no feature model"));
 			systemWriter.createNewLine();
 			systemWriter.addValue(systemIndex);
 			systemWriter.addValue(systemName);
 			systemWriter.addValue(VariableMap.fromExpression(formula).size());
 			systemWriter.addValue(NormalForms.simplifyForNF(formula).getChildren().size());
-			// systemWriter.addValue(new CountSolutionsAnalysis().getResult(new
-			// ModelRepresentation(formula)).orElse(
-			// Logger::logProblems));
-			systemWriter.addValue(0);
 			systemWriter.flush();
 			for (int maxNumValue : maxNumValues.getValue()) {
 				for (int maxLenValue : maxLenValues.getValue()) {
 					for (int i = 0; i < config.systemIterations.getValue(); i++) {
-						CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer(maxNumValue,
-							maxLenValue);
-						FormulaProvider.TseytinCNF formulaProvider = (c, m) -> Provider.convert(c,
-							FormulaProvider.identifier, transformer, m);
-						transformToCNF(systemName, i, formula, transformer, formulaProvider,
-							CNFProvider.fromTseytinFormula(), maxNumValue, maxLenValue);
+						try {
+							Logger.logInfo("Running for " + systemName + " " + maxLenValue + " " + maxNumValue);
+							writer.createNewLine();
+							writer.addValue(systemIndex);
+							writer.addValue(maxNumValue);
+							writer.addValue(maxLenValue);
+							writer.addValue(i);
+
+							Result<List<String>> result = new Result<>();
+							processRunner.run(new TseytinAlgorithm(config.modelPath, systemName, maxNumValue,
+								maxLenValue, config.tempPath, "model2cnf"), result);
+							writeResults(result.getResult(), 5);
+
+							result = new Result<>();
+							processRunner.run(new TseytinAlgorithm(config.modelPath, systemName, maxNumValue,
+								maxLenValue, config.tempPath, "sat"), result);
+							writeResults(result.getResult(), 2);
+
+							result = new Result<>();
+							processRunner.run(new TseytinAlgorithm(config.modelPath, systemName, maxNumValue,
+								maxLenValue, config.tempPath, "sharpsat"), result);
+							writeResults(result.getResult(), 2);
+						} finally {
+							writer.flush();
+						}
 					}
 				}
 			}
@@ -109,47 +127,15 @@ public class TseytinEvaluator extends Evaluator {
 		}
 	}
 
-	private void transformToCNF(String systemName, int i, Formula formula, CountingCNFTseytinTransformer transformer,
-		Provider<Formula> formulaProvider, Provider<CNF> cnfProvider, int maximumNumberOfClauses,
-		int maximumLengthOfClauses) {
-		try {
-			writer.createNewLine();
-			Logger.logInfo(String.format("Running for %s and maxNum=%d, maxLen=%d",
-				systemName, maximumNumberOfClauses, maximumLengthOfClauses));
-
-			writer.addValue(systemIndex);
-			writer.addValue(maximumNumberOfClauses);
-			writer.addValue(maximumLengthOfClauses);
-			writer.addValue(i);
-
-			long localTime, timeNeeded;
-			final ModelRepresentation rep = new ModelRepresentation(formula);
-
-			localTime = System.nanoTime();
-			formula = rep.get(formulaProvider);
-			timeNeeded = System.nanoTime() - localTime;
-			writer.addValue(timeNeeded);
-
-			localTime = System.nanoTime();
-			final HasSolutionAnalysis hasSolutionAnalysis = new HasSolutionAnalysis();
-			hasSolutionAnalysis.setSolverInputProvider(cnfProvider);
-			hasSolutionAnalysis.getResult(rep).get();
-			timeNeeded = System.nanoTime() - localTime;
-			writer.addValue(timeNeeded);
-
-//			localTime = System.nanoTime();
-//			new CountSolutionsAnalysis().getResult(rep).orElse(Logger::logProblems);
-//			timeNeeded = System.nanoTime() - localTime;
-//			writer.addValue(timeNeeded);
-			writer.addValue(0);
-
-			writer.addValue(VariableMap.fromExpression(formula).size());
-			writer.addValue(formula.getChildren().size());
-			writer.addValue(transformer.getNumberOfTseytinTransformedClauses());
-			rep.getCache().reset();
-		} finally {
-			writer.flush();
-			System.gc();
-		}
+	void writeResults(List<String> resultList, int expectedNum) {
+		resultList = resultList.stream()
+			.filter(line -> line.startsWith("res="))
+			.map(line -> line.replace("res=", ""))
+			.collect(Collectors.toList());
+		if (resultList.size() == 0) {
+			for (int j = 0; j < expectedNum; j++)
+				writer.addValue("NA");
+		} else
+			resultList.forEach(writer::addValue);
 	}
 }

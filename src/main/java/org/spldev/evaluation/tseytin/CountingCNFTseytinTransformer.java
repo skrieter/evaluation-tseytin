@@ -6,6 +6,7 @@ import org.spldev.formula.expression.transform.CNFTseytinTransformer;
 import java.util.ArrayList;
 
 public class CountingCNFTseytinTransformer extends CNFTseytinTransformer {
+	private int numberOfTseytinTransformedConstraints = 0;
 	private int numberOfTseytinTransformedClauses = 0;
 
 	public CountingCNFTseytinTransformer(int maximumNumberOfClauses, int maximumLengthOfClauses) {
@@ -15,6 +16,7 @@ public class CountingCNFTseytinTransformer extends CNFTseytinTransformer {
 	@Override
 	public void tseytin(final ArrayList<Formula> newChildren, Formula child) {
 		super.tseytin(newChildren, child);
+		numberOfTseytinTransformedConstraints++;
 		if (!stack.isEmpty()) {
 			numberOfTseytinTransformedClauses++;
 		}
@@ -23,5 +25,9 @@ public class CountingCNFTseytinTransformer extends CNFTseytinTransformer {
 
 	public int getNumberOfTseytinTransformedClauses() {
 		return numberOfTseytinTransformedClauses;
+	}
+
+	public int getNumberOfTseytinTransformedConstraints() {
+		return numberOfTseytinTransformedConstraints;
 	}
 }
