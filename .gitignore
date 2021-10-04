@@ -12,4 +12,3 @@ models/
 output
 .Rhistory
 config/models.txt
-libs/sharpSAT

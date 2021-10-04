@@ -3,8 +3,6 @@ package org.spldev.evaluation.tseytin;
 import org.spldev.evaluation.util.ModelReader;
 import org.spldev.formula.ModelRepresentation;
 import org.spldev.formula.analysis.sat4j.HasSolutionAnalysis;
-import org.spldev.formula.analysis.sharpsat.CountSolutionsAnalysis;
-import org.spldev.formula.clauses.CNFProvider;
 import org.spldev.formula.expression.Formula;
 import org.spldev.formula.expression.FormulaProvider;
 import org.spldev.formula.expression.atomic.literal.VariableMap;
@@ -15,7 +13,6 @@ import org.spldev.util.io.FileHandler;
 import org.spldev.util.io.format.FormatSupplier;
 
 import java.io.IOException;
-import java.math.BigInteger;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -66,15 +63,6 @@ public class TseytinRunner {
 			timeNeeded = System.nanoTime() - localTime;
 			printResult(timeNeeded);
 			printResult(sat);
-		} else if (stage.equals("sharpsat")) {
-			Formula formula = FileHandler.load(getTempPath(tempPath, modelPathName, modelFileName),
-				new DIMACSFormat()).orElseThrow();
-			final ModelRepresentation rep = new ModelRepresentation(formula);
-			localTime = System.nanoTime();
-			BigInteger sharpSat = new CountSolutionsAnalysis().getResult(rep).get();
-			timeNeeded = System.nanoTime() - localTime;
-			printResult(timeNeeded);
-			printResult(sharpSat);
 		} else {
 			throw new RuntimeException("invalid stage");
 		}

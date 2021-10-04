@@ -67,7 +67,7 @@ public class TseytinEvaluator extends Evaluator {
 		writer = addCSVWriter("evaluation.csv",
 			Arrays.asList("ID", "MaxNumOfClauses", "MaxLenOfClauses", "Iteration",
 				"TransformTime", "Variables", "Clauses", "TseytinClauses", "TseytinConstraints",
-				"SatTime", "Sat", "SharpSatTime", "SharpSat"));
+				"SatTime", "Sat"));
 		systemWriter = addCSVWriter("systems.csv", Arrays.asList("ID", "System", "Features", "Constraints"));
 	}
 
@@ -96,7 +96,7 @@ public class TseytinEvaluator extends Evaluator {
 				for (int maxLenValue : maxLenValues.getValue()) {
 					for (int i = 0; i < config.systemIterations.getValue(); i++) {
 						try {
-							Logger.logInfo("Running for " + systemName + " " + maxLenValue + " " + maxNumValue);
+							Logger.logInfo("Running for " + systemName + " " + maxNumValue + " " + maxLenValue);
 							writer.createNewLine();
 							writer.addValue(systemIndex);
 							writer.addValue(maxNumValue);
@@ -111,11 +111,6 @@ public class TseytinEvaluator extends Evaluator {
 							result = new Result<>();
 							processRunner.run(new TseytinAlgorithm(config.modelPath, systemName, maxNumValue,
 								maxLenValue, config.tempPath, "sat"), result);
-							writeResults(result.getResult(), 2);
-
-							result = new Result<>();
-							processRunner.run(new TseytinAlgorithm(config.modelPath, systemName, maxNumValue,
-								maxLenValue, config.tempPath, "sharpsat"), result);
 							writeResults(result.getResult(), 2);
 						} finally {
 							writer.flush();
