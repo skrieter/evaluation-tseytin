@@ -38,9 +38,9 @@ public class TseytinRunner {
 				.orElseThrow(p -> new RuntimeException("no feature model"));
 			final ModelRepresentation rep = new ModelRepresentation(formula);
 
-			System.out.println("===");
-			JavaSmtSolver.toTseitinFormula(formula);
-			System.out.println("===");
+//			System.out.println("===");
+//			JavaSmtSolver.toTseitinFormula(formula);
+//			System.out.println("===");
 
 			CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer(
 				maximumNumberOfClauses, maximumLengthOfClauses);
