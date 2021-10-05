@@ -8,8 +8,6 @@ import org.spldev.formula.expression.FormulaProvider;
 import org.spldev.formula.expression.atomic.literal.VariableMap;
 import org.spldev.formula.expression.io.DIMACSFormat;
 import org.spldev.formula.expression.io.parse.KConfigReaderFormat;
-import org.spldev.formula.solver.javasmt.JavaSmtFormula;
-import org.spldev.formula.solver.javasmt.JavaSmtSolver;
 import org.spldev.util.Provider;
 import org.spldev.util.io.FileHandler;
 import org.spldev.util.io.format.FormatSupplier;
@@ -19,15 +17,19 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class TseytinRunner {
+	static String modelPathName, modelFileName, tempPath;
+	static int maximumNumberOfClauses, maximumLengthOfClauses, i;
+
 	public static void main(String[] args) {
-		if (args.length != 6)
+		if (args.length != 7)
 			throw new RuntimeException("invalid usage");
-		String modelPathName = args[0];
-		String modelFileName = args[1];
-		int maximumNumberOfClauses = Integer.parseInt(args[2]);
-		int maximumLengthOfClauses = Integer.parseInt(args[3]);
-		String tempPath = args[4];
-		String stage = args[5];
+		modelPathName = args[0];
+		modelFileName = args[1];
+		maximumNumberOfClauses = Integer.parseInt(args[2]);
+		maximumLengthOfClauses = Integer.parseInt(args[3]);
+		i = Integer.parseInt(args[4]);
+		tempPath = args[5];
+		String stage = args[6];
 		long localTime, timeNeeded;
 
 		if (stage.equals("model2cnf")) {
@@ -56,13 +58,16 @@ public class TseytinRunner {
 			printResult(transformer.getNumberOfTseytinTransformedClauses());
 			printResult(transformer.getNumberOfTseytinTransformedConstraints());
 			try {
-				FileHandler.save(formula, getTempPath(tempPath, modelPathName, modelFileName), new DIMACSFormat());
+				FileHandler.save(formula, getTempPath(), new DIMACSFormat());
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		} else if (stage.equals("sat")) {
-			Formula formula = FileHandler.load(getTempPath(tempPath, modelPathName, modelFileName),
-				new DIMACSFormat()).orElseThrow();
+			Formula formula = FileHandler.load(getTempPath(),
+				new DIMACSFormat()).get();
+			if (formula == null) {
+				return;
+			}
 			final ModelRepresentation rep = new ModelRepresentation(formula);
 			localTime = System.nanoTime();
 			Boolean sat = new HasSolutionAnalysis().getResult(rep).get();
@@ -74,8 +79,9 @@ public class TseytinRunner {
 		}
 	}
 
-	private static Path getTempPath(String tempPath, String modelPathName, String modelFileName) {
-		return Paths.get(tempPath).resolve((modelPathName + "_" + modelFileName).replace("/", "_"));
+	private static Path getTempPath() {
+		return Paths.get(tempPath).resolve((String.format("%s_%s_%d_%d_%d", modelPathName, modelFileName,
+			maximumNumberOfClauses, maximumLengthOfClauses, i)).replace("/", "_"));
 	}
 
 	static void printResult(Object o) {

@@ -112,12 +112,12 @@ public class TseytinEvaluator extends Evaluator {
 
 							Result<List<String>> result = new Result<>();
 							processRunner.run(new TseytinAlgorithm(config.modelPath, systemName, maxNumValue,
-								maxLenValue, config.tempPath, "model2cnf"), result);
+								maxLenValue, i, config.tempPath, "model2cnf"), result);
 							writeResults(result.getResult(), 5);
 
 							result = new Result<>();
 							processRunner.run(new TseytinAlgorithm(config.modelPath, systemName, maxNumValue,
-								maxLenValue, config.tempPath, "sat"), result);
+								maxLenValue, i, config.tempPath, "sat"), result);
 							writeResults(result.getResult(), 2);
 						} finally {
 							writer.flush();
