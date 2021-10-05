@@ -12,3 +12,5 @@ models/
 output
 .Rhistory
 config/models.txt
+libs
+config/*.csv
