@@ -36,10 +36,10 @@ import org.spldev.util.io.csv.CSVWriter;
 import org.spldev.util.io.format.FormatSupplier;
 import org.spldev.util.logging.Logger;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Evaluate the (hybrid) Tseytin transformation. This assumes that input
@@ -95,13 +95,20 @@ public class TseytinEvaluator extends Evaluator {
 			for (int maxNumValue : maxNumValues.getValue()) {
 				for (int maxLenValue : maxLenValues.getValue()) {
 					for (int i = 0; i < config.systemIterations.getValue(); i++) {
+						writer.createNewLine();
+						writer.addValue(systemIndex);
+						writer.addValue(maxNumValue);
+						writer.addValue(maxLenValue);
+						writer.addValue(i);
+
+						if (!(maxNumValue == 0 && maxLenValue == 0) && (maxNumValue == 0 || maxLenValue == 0)) {
+							Logger.logInfo("Skipping for " + systemName + " " + maxNumValue + " " + maxLenValue);
+							writeResults(new ArrayList<>(), 7);
+							continue;
+						}
+
 						try {
 							Logger.logInfo("Running for " + systemName + " " + maxNumValue + " " + maxLenValue);
-							writer.createNewLine();
-							writer.addValue(systemIndex);
-							writer.addValue(maxNumValue);
-							writer.addValue(maxLenValue);
-							writer.addValue(i);
 
 							Result<List<String>> result = new Result<>();
 							processRunner.run(new TseytinAlgorithm(config.modelPath, systemName, maxNumValue,
