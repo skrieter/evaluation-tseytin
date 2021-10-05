@@ -8,6 +8,8 @@ import org.spldev.formula.expression.FormulaProvider;
 import org.spldev.formula.expression.atomic.literal.VariableMap;
 import org.spldev.formula.expression.io.DIMACSFormat;
 import org.spldev.formula.expression.io.parse.KConfigReaderFormat;
+import org.spldev.formula.solver.javasmt.JavaSmtFormula;
+import org.spldev.formula.solver.javasmt.JavaSmtSolver;
 import org.spldev.util.Provider;
 import org.spldev.util.io.FileHandler;
 import org.spldev.util.io.format.FormatSupplier;
@@ -35,6 +37,10 @@ public class TseytinRunner {
 			Formula formula = fmReader.read(modelFileName)
 				.orElseThrow(p -> new RuntimeException("no feature model"));
 			final ModelRepresentation rep = new ModelRepresentation(formula);
+
+			System.out.println("===");
+			JavaSmtSolver.toTseitinFormula(formula);
+			System.out.println("===");
 
 			CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer(
 				maximumNumberOfClauses, maximumLengthOfClauses);
