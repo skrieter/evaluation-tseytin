@@ -129,7 +129,7 @@ public class TseytinEvaluator extends Evaluator {
 		Logger.logInfo("Running for " + systemName + " " + maxNumValue + " " + maxLenValue);
 		tabFormatter.setTabLevel(2);
 		final TseytinAlgorithm algorithm = new TseytinAlgorithm(config.modelPath, systemName,
-			maxNumValue, maxLenValue, systemIteration, config.tempPath);
+			maxNumValue, maxLenValue, systemIteration, config.tempPath, config.timeout.getValue());
 		runAlgorithm(algorithm, "model2cnf", 0);
 		runAlgorithm(algorithm, "sat", 5);
 		runAlgorithm(algorithm, "core", 7);
@@ -161,7 +161,7 @@ public class TseytinEvaluator extends Evaluator {
 		systemWriter.addValue(NormalForms.simplifyForNF(formula).getChildren().size());
 	}
 
-	void copyResults(List<String> resultList, int start) {
+	private void copyResults(List<String> resultList, int start) {
 		resultList = resultList.stream()
 			.filter(line -> line.startsWith("res="))
 			.map(line -> line.replace("res=", ""))
@@ -170,4 +170,5 @@ public class TseytinEvaluator extends Evaluator {
 			results[start++] = value;
 		}
 	}
+
 }

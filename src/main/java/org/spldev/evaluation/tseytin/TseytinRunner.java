@@ -22,20 +22,20 @@ public class TseytinRunner {
 	static int maximumNumberOfClauses, maximumLengthOfClauses, i;
 
 	public static void main(String[] args) {
-		if (args.length != 7) {
+		if (args.length != 8)
 			throw new RuntimeException("invalid usage");
-		}
 		modelPathName = args[0];
 		modelFileName = args[1];
 		maximumNumberOfClauses = Integer.parseInt(args[2]);
 		maximumLengthOfClauses = Integer.parseInt(args[3]);
 		i = Integer.parseInt(args[4]);
 		tempPath = args[5];
-		final String stage = args[6];
-
-		long localTime, timeNeeded;
+		String stage = args[6];
+		long timeout = Long.parseLong(args[7]);
 
 		ExtensionLoader.load();
+
+		long localTime, timeNeeded;
 
 		switch (stage) {
 		case "model2cnf": {
@@ -45,7 +45,11 @@ public class TseytinRunner {
 			Formula formula = fmReader.read(modelFileName)
 				.orElseThrow(p -> new RuntimeException("no feature model"));
 
-			final CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer(
+			// localTime = System.nanoTime();
+			// formula = Executor.run(new CNFTseytinTransformer(), formula).orElseThrow();
+			// timeNeeded = System.nanoTime() - localTime;
+
+			CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer(
 				maximumNumberOfClauses, maximumLengthOfClauses);
 			localTime = System.nanoTime();
 			formula = Executor.run(transformer, formula).orElse(Logger::logProblems);
@@ -54,13 +58,13 @@ public class TseytinRunner {
 			printResult(timeNeeded);
 			printResult(VariableMap.fromExpression(formula).size());
 			printResult(formula.getChildren().size());
-//			printResult("NA");
-//			printResult("NA");
+			// printResult("NA");
+			// printResult("NA");
 			printResult(transformer.getNumberOfTseytinTransformedClauses());
 			printResult(transformer.getNumberOfTseytinTransformedConstraints());
 			try {
 				FileHandler.save(formula, getTempPath(), new DIMACSFormat());
-			} catch (final IOException e) {
+			} catch (IOException e) {
 				e.printStackTrace();
 			}
 			break;
@@ -87,6 +91,7 @@ public class TseytinRunner {
 			final ModelRepresentation rep = ModelRepresentation.load(getTempPath()).orElseThrow();
 			localTime = System.nanoTime();
 			final CountSolutionsAnalysis countSolutionsAnalysis = new CountSolutionsAnalysis();
+			countSolutionsAnalysis.setTimeout((int) (Math.ceil(timeout / 1000.0)));
 			final BigInteger sharpSat = countSolutionsAnalysis.getResult(rep).get();
 			timeNeeded = System.nanoTime() - localTime;
 			printResult(timeNeeded);
