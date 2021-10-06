@@ -22,11 +22,10 @@
  */
 package org.spldev.evaluation.tseytin;
 
-import org.spldev.evaluation.process.Algorithm;
+import java.nio.file.*;
+import java.util.*;
 
-import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+import org.spldev.evaluation.process.*;
 
 public class TseytinAlgorithm extends Algorithm<List<String>> {
 	private final Path modelPath;
