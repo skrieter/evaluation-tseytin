@@ -72,14 +72,14 @@ public class TseytinRunner {
 			try {
 				future.get(timeout, TimeUnit.MILLISECONDS);
 			} catch (TimeoutException e) {
-				future.cancel(true);
+				System.exit(0);
 			} catch (ExecutionException | InterruptedException e) {
 				e.printStackTrace();
 			}
 			executor.shutdownNow();
 		} else if (stage.equals("sat")) {
 			Formula formula = FileHandler.load(getTempPath(),
-					new DIMACSFormat()).get();
+				new DIMACSFormat()).get();
 			if (formula == null) {
 				return;
 			}
@@ -96,14 +96,14 @@ public class TseytinRunner {
 			try {
 				future.get(timeout, TimeUnit.MILLISECONDS);
 			} catch (TimeoutException e) {
-				future.cancel(true);
+				System.exit(0);
 			} catch (ExecutionException | InterruptedException e) {
 				e.printStackTrace();
 			}
 			executor.shutdownNow();
 		} else if (stage.equals("core-dead")) {
 			Formula formula = FileHandler.load(getTempPath(),
-					new DIMACSFormat()).get();
+				new DIMACSFormat()).get();
 			if (formula == null) {
 				return;
 			}
@@ -119,7 +119,7 @@ public class TseytinRunner {
 			try {
 				future.get(timeout, TimeUnit.MILLISECONDS);
 			} catch (TimeoutException e) {
-				future.cancel(true);
+				System.exit(0);
 			} catch (ExecutionException | InterruptedException e) {
 				e.printStackTrace();
 			}

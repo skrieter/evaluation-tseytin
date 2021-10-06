@@ -70,7 +70,7 @@ public class TseytinEvaluator extends Evaluator {
 			Arrays.asList("ID", "MaxNumOfClauses", "MaxLenOfClauses", "Iteration",
 				"TransformTime", "Variables", "Clauses", "TseytinClauses", "TseytinConstraints",
 				"SatTime", "Sat",
-					//"CoreDeadTime",
+				// "CoreDeadTime",
 				"Inferred"));
 		systemWriter = addCSVWriter("systems.csv", Arrays.asList("ID", "System", "Features", "Constraints"));
 	}
@@ -127,7 +127,7 @@ public class TseytinEvaluator extends Evaluator {
 			}
 
 			Logger.logInfo("cutoffs at " + cutoffPoints.keySet().stream().map(Pair::toString).collect(Collectors
-				.joining()));
+				.joining(", ")));
 		}
 	}
 
@@ -148,7 +148,7 @@ public class TseytinEvaluator extends Evaluator {
 			maxLenValue, i, config.tempPath, "model2cnf", config.timeout.getValue()), result);
 		List<String> resultList = cleanResults(result.getResult(), 5);
 		processRunner.run(new TseytinAlgorithm(config.modelPath, systemName, maxNumValue,
-				maxLenValue, i, config.tempPath, "sat", config.timeout.getValue()), result);
+			maxLenValue, i, config.tempPath, "sat", config.timeout.getValue()), result);
 		resultList.addAll(cleanResults(result.getResult(), 2));
 //		processRunner.run(new TseytinAlgorithm(config.modelPath, systemName, maxNumValue,
 //				maxLenValue, i, config.tempPath, "core-dead", config.timeout.getValue()), result);
