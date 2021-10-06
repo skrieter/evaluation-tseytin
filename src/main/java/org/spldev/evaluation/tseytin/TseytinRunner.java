@@ -1,18 +1,21 @@
 package org.spldev.evaluation.tseytin;
 
 import java.io.*;
+import java.math.*;
 import java.nio.file.*;
 
 import org.spldev.evaluation.util.*;
 import org.spldev.formula.*;
 import org.spldev.formula.analysis.sat4j.*;
+import org.spldev.formula.analysis.sharpsat.CountSolutionsAnalysis;
+import org.spldev.formula.clauses.*;
 import org.spldev.formula.expression.*;
 import org.spldev.formula.expression.atomic.literal.*;
 import org.spldev.formula.expression.io.*;
-import org.spldev.formula.expression.io.parse.*;
-import org.spldev.util.*;
+import org.spldev.util.extension.*;
 import org.spldev.util.io.*;
-import org.spldev.util.io.format.*;
+import org.spldev.util.job.*;
+import org.spldev.util.logging.*;
 
 public class TseytinRunner {
 	static String modelPathName, modelFileName, tempPath;
@@ -32,20 +35,20 @@ public class TseytinRunner {
 
 		long localTime, timeNeeded;
 
-		if (stage.equals("model2cnf")) {
+		ExtensionLoader.load();
+
+		switch (stage) {
+		case "model2cnf": {
 			final ModelReader<Formula> fmReader = new ModelReader<>();
 			fmReader.setPathToFiles(Paths.get(modelPathName));
-			fmReader.setFormatSupplier(FormatSupplier.of(new KConfigReaderFormat()));
+			fmReader.setFormatSupplier(FormulaFormatManager.getInstance());
 			Formula formula = fmReader.read(modelFileName)
 				.orElseThrow(p -> new RuntimeException("no feature model"));
-			final ModelRepresentation rep = new ModelRepresentation(formula);
 
 			final CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer(
 				maximumNumberOfClauses, maximumLengthOfClauses);
-			final FormulaProvider.TseytinCNF formulaProvider = (c, m) -> Provider.convert(c,
-				FormulaProvider.identifier, transformer, m);
 			localTime = System.nanoTime();
-			formula = rep.get(formulaProvider);
+			formula = Executor.run(transformer, formula).orElse(Logger::logProblems);
 			timeNeeded = System.nanoTime() - localTime;
 
 			printResult(timeNeeded);
@@ -60,26 +63,55 @@ public class TseytinRunner {
 			} catch (final IOException e) {
 				e.printStackTrace();
 			}
-		} else if (stage.equals("sat")) {
-			final Formula formula = FileHandler.load(getTempPath(),
-				new DIMACSFormat()).get();
-			if (formula == null) {
-				return;
-			}
-			final ModelRepresentation rep = new ModelRepresentation(formula);
+			break;
+		}
+		case "sat": {
+			final ModelRepresentation rep = ModelRepresentation.load(getTempPath()).orElseThrow();
 			localTime = System.nanoTime();
 			final Boolean sat = new HasSolutionAnalysis().getResult(rep).get();
 			timeNeeded = System.nanoTime() - localTime;
 			printResult(timeNeeded);
 			printResult(sat);
-		} else {
+			break;
+		}
+		case "core": {
+			final ModelRepresentation rep = ModelRepresentation.load(getTempPath()).orElseThrow();
+			localTime = System.nanoTime();
+			final LiteralList coreDead = new CoreDeadAnalysis().getResult(rep).orElseThrow();
+			timeNeeded = System.nanoTime() - localTime;
+			printResult(timeNeeded);
+			printResult(coreDead.size());
+			break;
+		}
+		case "sharpsat": {
+			final ModelRepresentation rep = ModelRepresentation.load(getTempPath()).orElseThrow();
+			localTime = System.nanoTime();
+			final CountSolutionsAnalysis countSolutionsAnalysis = new CountSolutionsAnalysis();
+			final BigInteger sharpSat = countSolutionsAnalysis.getResult(rep).get();
+			timeNeeded = System.nanoTime() - localTime;
+			printResult(timeNeeded);
+			printResult(sharpSat);
+			break;
+		}
+		default: {
 			throw new RuntimeException("invalid stage");
+		}
 		}
 	}
 
 	private static Path getTempPath() {
-		return Paths.get(tempPath).resolve((String.format("%s_%s_%d_%d_%d", modelPathName, modelFileName,
-			maximumNumberOfClauses, maximumLengthOfClauses, i)).replace("/", "_"));
+		final StringBuilder sb = new StringBuilder();
+		sb.append(modelPathName.replaceAll("[/]", "_"));
+		sb.append("_");
+		sb.append(modelFileName.replaceAll("[./]", "_"));
+		sb.append("_");
+		sb.append(maximumNumberOfClauses);
+		sb.append("_");
+		sb.append(maximumLengthOfClauses);
+		sb.append("_");
+		sb.append(i);
+		sb.append(".dimacs");
+		return Paths.get(tempPath).resolve(sb.toString());
 	}
 
 	static void printResult(Object o) {

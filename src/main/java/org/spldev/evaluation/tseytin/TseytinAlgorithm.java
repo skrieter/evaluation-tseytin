@@ -34,17 +34,19 @@ public class TseytinAlgorithm extends Algorithm<List<String>> {
 	private final int maxLen;
 	private final int i;
 	private final Path tempPath;
-	private final String stage;
+	private String stage;
 	private final ArrayList<String> results = new ArrayList<>();
 
-	public TseytinAlgorithm(Path modelPath, String modelFile, int maxNum, int maxLen, int i, Path tempPath,
-		String stage) {
+	public TseytinAlgorithm(Path modelPath, String modelFile, int maxNum, int maxLen, int i, Path tempPath) {
 		this.modelPath = modelPath;
 		this.modelFile = modelFile;
 		this.maxNum = maxNum;
 		this.maxLen = maxLen;
 		this.i = i;
 		this.tempPath = tempPath;
+	}
+
+	public void setStage(String stage) {
 		this.stage = stage;
 	}
 
@@ -67,11 +69,12 @@ public class TseytinAlgorithm extends Algorithm<List<String>> {
 
 	@Override
 	public void postProcess() throws Exception {
+		results.clear();
 	}
 
 	@Override
 	public List<String> parseResults() {
-		return results;
+		return new ArrayList<>(results);
 	}
 
 	@Override
