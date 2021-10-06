@@ -1,41 +1,35 @@
 package org.spldev.evaluation.tseytin;
 
-import org.spldev.evaluation.util.ModelReader;
-import org.spldev.formula.ModelRepresentation;
-import org.spldev.formula.analysis.sat4j.HasSolutionAnalysis;
-import org.spldev.formula.expression.Formula;
-import org.spldev.formula.expression.FormulaProvider;
-import org.spldev.formula.expression.atomic.literal.VariableMap;
-import org.spldev.formula.expression.io.DIMACSFormat;
-import org.spldev.formula.expression.io.parse.KConfigReaderFormat;
-import org.spldev.formula.solver.javasmt.CNFTseytinTransformer;
-import org.spldev.formula.solver.javasmt.JavaSmtSolver;
-import org.spldev.util.Provider;
-import org.spldev.util.Result;
-import org.spldev.util.io.FileHandler;
-import org.spldev.util.io.format.FormatSupplier;
-import org.spldev.util.job.DefaultMonitor;
-import org.spldev.util.job.Executor;
-import org.spldev.util.job.NullMonitor;
+import java.io.*;
+import java.nio.file.*;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import org.spldev.evaluation.util.*;
+import org.spldev.formula.*;
+import org.spldev.formula.analysis.sat4j.*;
+import org.spldev.formula.expression.*;
+import org.spldev.formula.expression.atomic.literal.*;
+import org.spldev.formula.expression.io.*;
+import org.spldev.formula.expression.io.parse.*;
+import org.spldev.util.*;
+import org.spldev.util.io.*;
+import org.spldev.util.io.format.*;
 
 public class TseytinRunner {
 	static String modelPathName, modelFileName, tempPath;
 	static int maximumNumberOfClauses, maximumLengthOfClauses, i;
 
 	public static void main(String[] args) {
-		if (args.length != 7)
+		if (args.length != 7) {
 			throw new RuntimeException("invalid usage");
+		}
 		modelPathName = args[0];
 		modelFileName = args[1];
 		maximumNumberOfClauses = Integer.parseInt(args[2]);
 		maximumLengthOfClauses = Integer.parseInt(args[3]);
 		i = Integer.parseInt(args[4]);
 		tempPath = args[5];
-		String stage = args[6];
+		final String stage = args[6];
+
 		long localTime, timeNeeded;
 
 		if (stage.equals("model2cnf")) {
@@ -46,13 +40,9 @@ public class TseytinRunner {
 				.orElseThrow(p -> new RuntimeException("no feature model"));
 			final ModelRepresentation rep = new ModelRepresentation(formula);
 
-//			localTime = System.nanoTime();
-//			formula = Executor.run(new CNFTseytinTransformer(), formula).orElseThrow();
-//			timeNeeded = System.nanoTime() - localTime;
-
-			CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer(
+			final CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer(
 				maximumNumberOfClauses, maximumLengthOfClauses);
-			FormulaProvider.TseytinCNF formulaProvider = (c, m) -> Provider.convert(c,
+			final FormulaProvider.TseytinCNF formulaProvider = (c, m) -> Provider.convert(c,
 				FormulaProvider.identifier, transformer, m);
 			localTime = System.nanoTime();
 			formula = rep.get(formulaProvider);
@@ -67,18 +57,18 @@ public class TseytinRunner {
 			printResult(transformer.getNumberOfTseytinTransformedConstraints());
 			try {
 				FileHandler.save(formula, getTempPath(), new DIMACSFormat());
-			} catch (IOException e) {
+			} catch (final IOException e) {
 				e.printStackTrace();
 			}
 		} else if (stage.equals("sat")) {
-			Formula formula = FileHandler.load(getTempPath(),
+			final Formula formula = FileHandler.load(getTempPath(),
 				new DIMACSFormat()).get();
 			if (formula == null) {
 				return;
 			}
 			final ModelRepresentation rep = new ModelRepresentation(formula);
 			localTime = System.nanoTime();
-			Boolean sat = new HasSolutionAnalysis().getResult(rep).get();
+			final Boolean sat = new HasSolutionAnalysis().getResult(rep).get();
 			timeNeeded = System.nanoTime() - localTime;
 			printResult(timeNeeded);
 			printResult(sat);

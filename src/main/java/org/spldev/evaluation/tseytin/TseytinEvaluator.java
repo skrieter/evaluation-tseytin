@@ -22,24 +22,20 @@
  */
 package org.spldev.evaluation.tseytin;
 
-import org.spldev.evaluation.Evaluator;
-import org.spldev.evaluation.process.ProcessRunner;
-import org.spldev.evaluation.process.Result;
-import org.spldev.evaluation.properties.ListProperty;
-import org.spldev.evaluation.properties.Property;
-import org.spldev.evaluation.util.ModelReader;
-import org.spldev.formula.expression.Formula;
-import org.spldev.formula.expression.atomic.literal.VariableMap;
-import org.spldev.formula.expression.io.parse.KConfigReaderFormat;
-import org.spldev.formula.expression.transform.NormalForms;
-import org.spldev.util.io.csv.CSVWriter;
-import org.spldev.util.io.format.FormatSupplier;
-import org.spldev.util.logging.Logger;
+import java.util.*;
+import java.util.stream.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
+import org.spldev.evaluation.*;
+import org.spldev.evaluation.process.*;
+import org.spldev.evaluation.properties.*;
+import org.spldev.evaluation.util.*;
+import org.spldev.formula.expression.*;
+import org.spldev.formula.expression.atomic.literal.*;
+import org.spldev.formula.expression.io.parse.*;
+import org.spldev.formula.expression.transform.*;
+import org.spldev.util.io.csv.*;
+import org.spldev.util.io.format.*;
+import org.spldev.util.logging.*;
 
 /**
  * Evaluate the (hybrid) Tseytin transformation. This assumes that input
@@ -84,7 +80,7 @@ public class TseytinEvaluator extends Evaluator {
 			final String systemName = config.systemNames.get(systemIndex);
 			logSystem();
 			tabFormatter.incTabLevel();
-			Formula formula = fmReader.read(systemName)
+			final Formula formula = fmReader.read(systemName)
 				.orElseThrow(p -> new RuntimeException("no feature model"));
 			systemWriter.createNewLine();
 			systemWriter.addValue(systemIndex);
@@ -92,8 +88,8 @@ public class TseytinEvaluator extends Evaluator {
 			systemWriter.addValue(VariableMap.fromExpression(formula).size());
 			systemWriter.addValue(NormalForms.simplifyForNF(formula).getChildren().size());
 			systemWriter.flush();
-			for (int maxNumValue : maxNumValues.getValue()) {
-				for (int maxLenValue : maxLenValues.getValue()) {
+			for (final int maxNumValue : maxNumValues.getValue()) {
+				for (final int maxLenValue : maxLenValues.getValue()) {
 					for (int i = 0; i < config.systemIterations.getValue(); i++) {
 						writer.createNewLine();
 						writer.addValue(systemIndex);
@@ -101,7 +97,7 @@ public class TseytinEvaluator extends Evaluator {
 						writer.addValue(maxLenValue);
 						writer.addValue(i);
 
-						if (!(maxNumValue == 0 && maxLenValue == 0) && (maxNumValue == 0 || maxLenValue == 0)) {
+						if (((maxNumValue != 0) || (maxLenValue != 0)) && ((maxNumValue == 0) || (maxLenValue == 0))) {
 							Logger.logInfo("Skipping for " + systemName + " " + maxNumValue + " " + maxLenValue);
 							writeResults(new ArrayList<>(), 7);
 							continue;
@@ -135,9 +131,11 @@ public class TseytinEvaluator extends Evaluator {
 			.map(line -> line.replace("res=", ""))
 			.collect(Collectors.toList());
 		if (resultList.size() == 0) {
-			for (int j = 0; j < expectedNum; j++)
+			for (int j = 0; j < expectedNum; j++) {
 				writer.addValue("NA");
-		} else
+			}
+		} else {
 			resultList.forEach(writer::addValue);
+		}
 	}
 }
