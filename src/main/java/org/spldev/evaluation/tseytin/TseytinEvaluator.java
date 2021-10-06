@@ -36,11 +36,8 @@ import org.spldev.util.data.Pair;
 import org.spldev.util.io.csv.CSVWriter;
 import org.spldev.util.io.format.FormatSupplier;
 import org.spldev.util.logging.Logger;
-import scala.Int;
 
 import java.util.*;
-import java.util.function.BiFunction;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -54,7 +51,7 @@ public class TseytinEvaluator extends Evaluator {
 	protected static final ListProperty<Integer> maxLen = new ListProperty<>("maxLen", Property.IntegerConverter);
 	ProcessRunner processRunner;
 	int maxNumValue, maxLenValue;
-	HashMap<Pair<Integer, Integer>, List<String>> cutoffPoints;
+	HashMap<Pair<Integer, Integer>, List<List<String>>> cutoffPoints;
 
 	@Override
 	public String getId() {
@@ -72,7 +69,9 @@ public class TseytinEvaluator extends Evaluator {
 		writer = addCSVWriter("evaluation.csv",
 			Arrays.asList("ID", "MaxNumOfClauses", "MaxLenOfClauses", "Iteration",
 				"TransformTime", "Variables", "Clauses", "TseytinClauses", "TseytinConstraints",
-				"SatTime", "Sat", "Inferred"));
+				"SatTime", "Sat",
+					//"CoreDeadTime",
+				"Inferred"));
 		systemWriter = addCSVWriter("systems.csv", Arrays.asList("ID", "System", "Features", "Constraints"));
 	}
 
@@ -84,7 +83,6 @@ public class TseytinEvaluator extends Evaluator {
 		fmReader.setPathToFiles(config.modelPath);
 		fmReader.setFormatSupplier(FormatSupplier.of(new KConfigReaderFormat()));
 		processRunner = new ProcessRunner();
-		processRunner.setTimeout(config.timeout.getValue());
 		for (systemIndex = 0; systemIndex < systemIndexEnd; systemIndex++) {
 			final String systemName = config.systemNames.get(systemIndex);
 			logSystem();
@@ -109,14 +107,21 @@ public class TseytinEvaluator extends Evaluator {
 					} else if (belowCutoffPoint().isEmpty()) {
 						for (int i = 0; i < config.systemIterations.getValue(); i++) {
 							List<String> resultList = evaluate(systemName, maxNumValue, maxLenValue, i);
-							if ((resultList.get(0).equals("NA") || resultList.get(4).equals("0")) && i == 0)
-								cutoffPoints.put(new Pair<>(maxNumValue, maxLenValue), resultList);
+							if ((resultList.get(0).equals("NA") || resultList.get(4).equals("0"))) {
+								if (i == 0) {
+									List<List<String>> res = new ArrayList<>();
+									res.add(resultList);
+									cutoffPoints.put(new Pair<>(maxNumValue, maxLenValue), res);
+								} else
+									cutoffPoints.get(new Pair<>(maxNumValue, maxLenValue)).add(resultList);
+							}
 							if (maxNumValue == 0 && maxLenValue == 0)
 								tseytinResults = resultList;
 						}
 					} else {
 						for (int i = 0; i < config.systemIterations.getValue(); i++)
-							skipEvaluate(maxNumValue, maxLenValue, i, cutoffPoints.get(belowCutoffPoint().get()));
+							skipEvaluate(maxNumValue, maxLenValue, i, cutoffPoints.get(belowCutoffPoint().get()).get(
+								i));
 					}
 				}
 			}
@@ -140,11 +145,14 @@ public class TseytinEvaluator extends Evaluator {
 
 		Result<List<String>> result = new Result<>();
 		processRunner.run(new TseytinAlgorithm(config.modelPath, systemName, maxNumValue,
-			maxLenValue, i, config.tempPath, "model2cnf"), result);
+			maxLenValue, i, config.tempPath, "model2cnf", config.timeout.getValue()), result);
 		List<String> resultList = cleanResults(result.getResult(), 5);
 		processRunner.run(new TseytinAlgorithm(config.modelPath, systemName, maxNumValue,
-			maxLenValue, i, config.tempPath, "sat"), result);
+				maxLenValue, i, config.tempPath, "sat", config.timeout.getValue()), result);
 		resultList.addAll(cleanResults(result.getResult(), 2));
+//		processRunner.run(new TseytinAlgorithm(config.modelPath, systemName, maxNumValue,
+//				maxLenValue, i, config.tempPath, "core-dead", config.timeout.getValue()), result);
+//		resultList.addAll(cleanResults(result.getResult(), 1));
 		resultList.forEach(writer::addValue);
 		writer.addValue(false);
 		writer.flush();
