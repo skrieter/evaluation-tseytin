@@ -8,15 +8,9 @@ import org.spldev.formula.expression.FormulaProvider;
 import org.spldev.formula.expression.atomic.literal.VariableMap;
 import org.spldev.formula.expression.io.DIMACSFormat;
 import org.spldev.formula.expression.io.parse.KConfigReaderFormat;
-import org.spldev.formula.solver.javasmt.CNFTseytinTransformer;
-import org.spldev.formula.solver.javasmt.JavaSmtSolver;
 import org.spldev.util.Provider;
-import org.spldev.util.Result;
 import org.spldev.util.io.FileHandler;
 import org.spldev.util.io.format.FormatSupplier;
-import org.spldev.util.job.DefaultMonitor;
-import org.spldev.util.job.Executor;
-import org.spldev.util.job.NullMonitor;
 
 import java.io.IOException;
 import java.nio.file.Path;
