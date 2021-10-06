@@ -8,9 +8,15 @@ import org.spldev.formula.expression.FormulaProvider;
 import org.spldev.formula.expression.atomic.literal.VariableMap;
 import org.spldev.formula.expression.io.DIMACSFormat;
 import org.spldev.formula.expression.io.parse.KConfigReaderFormat;
+import org.spldev.formula.solver.javasmt.CNFTseytinTransformer;
+import org.spldev.formula.solver.javasmt.JavaSmtSolver;
 import org.spldev.util.Provider;
+import org.spldev.util.Result;
 import org.spldev.util.io.FileHandler;
 import org.spldev.util.io.format.FormatSupplier;
+import org.spldev.util.job.DefaultMonitor;
+import org.spldev.util.job.Executor;
+import org.spldev.util.job.NullMonitor;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -40,9 +46,9 @@ public class TseytinRunner {
 				.orElseThrow(p -> new RuntimeException("no feature model"));
 			final ModelRepresentation rep = new ModelRepresentation(formula);
 
-//			System.out.println("===");
-//			JavaSmtSolver.toTseitinFormula(formula);
-//			System.out.println("===");
+//			localTime = System.nanoTime();
+//			formula = Executor.run(new CNFTseytinTransformer(), formula).orElseThrow();
+//			timeNeeded = System.nanoTime() - localTime;
 
 			CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer(
 				maximumNumberOfClauses, maximumLengthOfClauses);
@@ -55,6 +61,8 @@ public class TseytinRunner {
 			printResult(timeNeeded);
 			printResult(VariableMap.fromExpression(formula).size());
 			printResult(formula.getChildren().size());
+//			printResult("NA");
+//			printResult("NA");
 			printResult(transformer.getNumberOfTseytinTransformedClauses());
 			printResult(transformer.getNumberOfTseytinTransformedConstraints());
 			try {
