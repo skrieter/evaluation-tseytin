@@ -67,8 +67,12 @@ public class TseytinRunner {
 
 		switch (stage) {
 		case "model2cnf": {
-
-			final TransformResult result = execute(TseytinRunner::transform);
+			final ModelReader<Formula> fmReader = new ModelReader<>();
+			fmReader.setPathToFiles(Paths.get(modelPathName));
+			fmReader.setFormatSupplier(FormulaFormatManager.getInstance());
+			final Formula formula = fmReader.read(modelFileName)
+				.orElseThrow(p -> new RuntimeException("no feature model"));
+			final TransformResult result = execute(() -> transform(formula));
 			if (result != null) {
 				printResult(result.timeNeeded);
 				printResult(VariableMap.fromExpression(result.formula).size());
@@ -84,7 +88,8 @@ public class TseytinRunner {
 			break;
 		}
 		case "sat": {
-			final Result<Boolean> result = execute(TseytinRunner::sat);
+			final ModelRepresentation rep = ModelRepresentation.load(getTempPath()).orElseThrow();
+			final Result<Boolean> result = execute(() -> sat(rep));
 			if (result != null) {
 				printResult(result.timeNeeded);
 				printResult(result.result);
@@ -92,7 +97,8 @@ public class TseytinRunner {
 			break;
 		}
 		case "core": {
-			final Result<Integer> result = execute(TseytinRunner::core);
+			final ModelRepresentation rep = ModelRepresentation.load(getTempPath()).orElseThrow();
+			final Result<Integer> result = execute(() -> core(rep));
 			if (result != null) {
 				printResult(result.timeNeeded);
 				printResult(result.result);
@@ -100,7 +106,8 @@ public class TseytinRunner {
 			break;
 		}
 		case "sharpsat": {
-			final Result<BigInteger> result = execute(TseytinRunner::sharpsat);
+			final ModelRepresentation rep = ModelRepresentation.load(getTempPath()).orElseThrow();
+			final Result<BigInteger> result = execute(() -> sharpsat(rep));
 			if (result != null) {
 				printResult(result.timeNeeded);
 				printResult(result.result);
@@ -113,25 +120,17 @@ public class TseytinRunner {
 		}
 	}
 
-	private static TransformResult transform() {
-		final ModelReader<Formula> fmReader = new ModelReader<>();
-		fmReader.setPathToFiles(Paths.get(modelPathName));
-		fmReader.setFormatSupplier(FormulaFormatManager.getInstance());
-		Formula formula = fmReader.read(modelFileName)
-			.orElseThrow(p -> new RuntimeException("no feature model"));
-
+	private static TransformResult transform(Formula formula) {
 		final CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer(
 			maximumNumberOfClauses, maximumLengthOfClauses);
 		final long localTime = System.nanoTime();
 		formula = Executor.run(transformer, formula).orElse(Logger::logProblems);
 		final long timeNeeded = System.nanoTime() - localTime;
 		return new TransformResult(formula, transformer.getNumberOfTseytinTransformedClauses(), transformer
-			.getNumberOfTseytinTransformedConstraints(),
-			timeNeeded);
+			.getNumberOfTseytinTransformedConstraints(), timeNeeded);
 	}
 
-	private static Result<Boolean> sat() {
-		final ModelRepresentation rep = ModelRepresentation.load(getTempPath()).orElseThrow();
+	private static Result<Boolean> sat(ModelRepresentation rep) {
 		final HasSolutionAnalysis hasSolutionAnalysis = new HasSolutionAnalysis();
 		final long localTime = System.nanoTime();
 		final Boolean sat = hasSolutionAnalysis.getResult(rep).get();
@@ -139,8 +138,7 @@ public class TseytinRunner {
 		return new Result<>(sat, timeNeeded);
 	}
 
-	private static Result<Integer> core() {
-		final ModelRepresentation rep = ModelRepresentation.load(getTempPath()).orElseThrow();
+	private static Result<Integer> core(ModelRepresentation rep) {
 		final CoreDeadAnalysis coreDeadAnalysis = new CoreDeadAnalysis();
 		final long localTime = System.nanoTime();
 		final LiteralList coreDead = coreDeadAnalysis.getResult(rep).orElseThrow();
@@ -148,8 +146,7 @@ public class TseytinRunner {
 		return new Result<>(coreDead.size(), timeNeeded);
 	}
 
-	private static Result<BigInteger> sharpsat() {
-		final ModelRepresentation rep = ModelRepresentation.load(getTempPath()).orElseThrow();
+	private static Result<BigInteger> sharpsat(ModelRepresentation rep) {
 		final CountSolutionsAnalysis countSolutionsAnalysis = new CountSolutionsAnalysis();
 		countSolutionsAnalysis.setTimeout((int) (Math.ceil(timeout / 1000.0)));
 		final long localTime = System.nanoTime();

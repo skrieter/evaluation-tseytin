@@ -95,7 +95,6 @@ public class TseytinEvaluator extends Evaluator {
 				logSystem();
 				tabFormatter.setTabLevel(1);
 				int lastMaxLen = Integer.MAX_VALUE;
-				boolean skipRemaining = false;
 
 				maxNumValue = 0;
 				maxLenValue = 0;
@@ -106,16 +105,13 @@ public class TseytinEvaluator extends Evaluator {
 					for (int j = 0; j < maxLenValues.size(); j++) {
 						maxNumValue = maxNumValues.get(i);
 						maxLenValue = maxLenValues.get(j);
-						Arrays.fill(results, "NA");
-						if (skipRemaining || (maxLenValue >= lastMaxLen)) {
+						if (maxLenValue >= lastMaxLen) {
 							Logger.logInfo("Skipping for " + systemName + " " + maxNumValue + " " + maxLenValue);
 						} else {
+							Arrays.fill(results, "NA");
 							transform();
-							if ("0".equals(results[4])) {
-								lastMaxLen = maxLenValue;
-								if (j == 0) {
-									skipRemaining = true;
-								}
+							if ("NA".equals(results[0]) || "0".equals(results[4])) {
+								lastMaxLen = j == 0 ? 0 : maxLenValue;
 							}
 						}
 						writeCSV(writer, this::writeResults);
