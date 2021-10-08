@@ -43,15 +43,13 @@ import org.spldev.util.logging.*;
  */
 public class TseytinEvaluator extends Evaluator {
 
-	protected static final ListProperty<Integer> maxNumProperty = new ListProperty<>("maxNum",
-		Property.IntegerConverter);
-	protected static final ListProperty<Integer> maxLenProperty = new ListProperty<>("maxLen",
+	protected static final ListProperty<Integer> maxLiteralsProperty = new ListProperty<>("maxLiterals",
 		Property.IntegerConverter);
 
 	protected CSVWriter writer, systemWriter;
 	protected ProcessRunner processRunner;
 	private String systemName;
-	private int maxNumValue, maxLenValue;
+	private int maxLiterals;
 	private Formula formula;
 	private String[] results = new String[11];
 
@@ -69,7 +67,7 @@ public class TseytinEvaluator extends Evaluator {
 	protected void addCSVWriters() {
 		super.addCSVWriters();
 		writer = addCSVWriter("evaluation.csv",
-			Arrays.asList("ID", "MaxNumOfClauses", "MaxLenOfClauses", "Iteration",
+			Arrays.asList("ID", "MaxLiterals", "Iteration",
 				"TransformTime", "Variables", "Clauses", "TseytinClauses", "TseytinConstraints",
 				"SatTime", "Sat", "CoreTime", "Core", "SharpSatTime", "SharpSat"));
 		systemWriter = addCSVWriter("systems.csv", Arrays.asList("ID", "System", "Features", "Constraints"));
@@ -84,8 +82,7 @@ public class TseytinEvaluator extends Evaluator {
 		fmReader.setFormatSupplier(FormulaFormatManager.getInstance());
 		processRunner = new ProcessRunner();
 		processRunner.setTimeout(config.timeout.getValue());
-		final List<Integer> maxNumValues = maxNumProperty.getValue();
-		final List<Integer> maxLenValues = maxLenProperty.getValue();
+		final List<Integer> maxLiteralsValues = maxLiteralsProperty.getValue();
 		for (systemIndex = 0; systemIndex < systemIndexEnd; systemIndex++) {
 			systemName = config.systemNames.get(systemIndex);
 			formula = fmReader.read(systemName).orElseThrow(p -> new RuntimeException("no feature model"));
@@ -94,25 +91,16 @@ public class TseytinEvaluator extends Evaluator {
 				tabFormatter.setTabLevel(0);
 				logSystem();
 				tabFormatter.setTabLevel(1);
-				int lastMaxLen = Integer.MAX_VALUE;
+				long lastMaxLiterals = Long.MAX_VALUE;
 
-				maxNumValue = 0;
-				maxLenValue = 0;
-				transform();
-				writeCSV(writer, this::writeResults);
-
-				for (int i = 0; i < maxNumValues.size(); i++) {
-					for (int j = 0; j < maxLenValues.size(); j++) {
-						maxNumValue = maxNumValues.get(i);
-						maxLenValue = maxLenValues.get(j);
-						if (maxLenValue >= lastMaxLen) {
-							Logger.logInfo("Skipping for " + systemName + " " + maxNumValue + " " + maxLenValue);
-						} else {
-							Arrays.fill(results, "NA");
-							transform();
-							if ("NA".equals(results[0]) || "0".equals(results[4])) {
-								lastMaxLen = j == 0 ? 0 : maxLenValue;
-							}
+				for (Integer maxLiteralsValue : maxLiteralsValues) {
+					maxLiterals = maxLiteralsValue;
+					if (maxLiterals >= lastMaxLiterals) {
+						Logger.logInfo("Skipping for " + systemName + " " + maxLiterals);
+					} else {
+						transform();
+						if ("NA".equals(results[0]) || "0".equals(results[4])) {
+							lastMaxLiterals = maxLiterals;
 						}
 						writeCSV(writer, this::writeResults);
 					}
@@ -122,14 +110,16 @@ public class TseytinEvaluator extends Evaluator {
 	}
 
 	private void transform() {
-		Logger.logInfo("Running for " + systemName + " " + maxNumValue + " " + maxLenValue);
+		Logger.logInfo("Running for " + systemName + " " + maxLiterals);
 		tabFormatter.setTabLevel(2);
 		final TseytinAlgorithm algorithm = new TseytinAlgorithm(config.modelPath, systemName,
-			maxNumValue, maxLenValue, systemIteration, config.tempPath, config.timeout.getValue());
+			maxLiterals, systemIteration, config.tempPath, config.timeout.getValue());
+		Arrays.fill(results, "NA");
 		runAlgorithm(algorithm, "model2cnf", 0);
 		runAlgorithm(algorithm, "sat", 5);
 		runAlgorithm(algorithm, "core", 7);
-		runAlgorithm(algorithm, "sharpsat", 9);
+		if (!(systemName.startsWith("linux") || systemName.startsWith("buildroot") || systemName.startsWith("freetz-ng")))
+			runAlgorithm(algorithm, "sharpsat", 9);
 	}
 
 	private void runAlgorithm(final TseytinAlgorithm algorithm, final String name, int resultIndex) {
@@ -142,8 +132,7 @@ public class TseytinEvaluator extends Evaluator {
 
 	private void writeResults(CSVWriter writer) {
 		writer.addValue(systemIndex);
-		writer.addValue(maxNumValue);
-		writer.addValue(maxLenValue);
+		writer.addValue(maxLiterals);
 		writer.addValue(systemIteration);
 		for (final String value : results) {
 			writer.addValue(value);

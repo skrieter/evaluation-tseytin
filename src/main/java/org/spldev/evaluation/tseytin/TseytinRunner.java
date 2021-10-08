@@ -68,22 +68,21 @@ public class TseytinRunner {
 	}
 
 	static String modelPathName, modelFileName, tempPath;
-	static int maximumNumberOfClauses, maximumLengthOfClauses, i;
+	static int maxLiterals, i;
 
 	static long timeout;
 
 	public static void main(String[] args) {
-		if (args.length != 8) {
+		if (args.length != 7) {
 			throw new RuntimeException("invalid usage");
 		}
 		modelPathName = args[0];
 		modelFileName = args[1];
-		maximumNumberOfClauses = Integer.parseInt(args[2]);
-		maximumLengthOfClauses = Integer.parseInt(args[3]);
-		i = Integer.parseInt(args[4]);
-		tempPath = args[5];
-		final String stage = args[6];
-		timeout = Long.parseLong(args[7]);
+		maxLiterals = Integer.parseInt(args[2]);
+		i = Integer.parseInt(args[3]);
+		tempPath = args[4];
+		final String stage = args[5];
+		timeout = Long.parseLong(args[6]);
 
 		ExtensionLoader.load();
 
@@ -144,9 +143,7 @@ public class TseytinRunner {
 
 	private static TransformResult transform(Formula formula) {
 		final CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer();
-		transformer.setMaximumNumberOfClauses(maximumNumberOfClauses);
-		transformer.setMaximumLengthOfClauses(maximumLengthOfClauses);
-		transformer.setMaximumNumberOfLiterals(Integer.MAX_VALUE);
+		transformer.setMaximumNumberOfLiterals(maxLiterals);
 		final long localTime = System.nanoTime();
 		formula = Executor.run(transformer, formula).orElse(Logger::logProblems);
 		final long timeNeeded = System.nanoTime() - localTime;
@@ -201,9 +198,7 @@ public class TseytinRunner {
 		sb.append("_");
 		sb.append(modelFileName.replaceAll("[./]", "_"));
 		sb.append("_");
-		sb.append(maximumNumberOfClauses);
-		sb.append("_");
-		sb.append(maximumLengthOfClauses);
+		sb.append(maxLiterals);
 		sb.append("_");
 		sb.append(i);
 		sb.append(".dimacs");
