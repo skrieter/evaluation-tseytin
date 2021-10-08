@@ -4,6 +4,7 @@ import java.io.*;
 import java.math.*;
 import java.nio.file.*;
 import java.util.concurrent.*;
+import java.util.function.Supplier;
 
 import org.spldev.evaluation.util.*;
 import org.spldev.formula.*;
@@ -19,6 +20,7 @@ import org.spldev.util.job.Executor;
 import org.spldev.util.logging.*;
 
 public class TseytinRunner {
+	static Supplier<CountingCNFTseytinTransformer> transformerSupplier;
 
 	private static class Result<T> {
 		private final T result;
@@ -51,7 +53,7 @@ public class TseytinRunner {
 	static long timeout;
 
 	public static void main(String[] args) {
-		if (args.length != 7) {
+		if (args.length != 8) {
 			throw new RuntimeException("invalid usage");
 		}
 		modelPathName = args[0];
@@ -61,6 +63,8 @@ public class TseytinRunner {
 		tempPath = args[4];
 		final String stage = args[5];
 		timeout = Long.parseLong(args[6]);
+		transformerSupplier = args[7].equals("baseline") ? BaselineCNFTransformer::new
+			: CountingCNFTseytinTransformer::new;
 
 		ExtensionLoader.load();
 
@@ -120,7 +124,7 @@ public class TseytinRunner {
 	}
 
 	private static TransformResult transform(Formula formula) {
-		final CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer();
+		final CountingCNFTseytinTransformer transformer = transformerSupplier.get();
 		transformer.setMaximumNumberOfLiterals(maxLiterals);
 		final long localTime = System.nanoTime();
 		formula = Executor.run(transformer, formula).orElse(Logger::logProblems);

@@ -10,8 +10,8 @@ import org.spldev.formula.expression.transform.TseytinTransformer.*;
 import org.spldev.util.job.*;
 
 public class CountingCNFTseytinTransformer extends CNFTransformer {
-	private int numberOfTseytinTransformedConstraints = 0;
-	private int numberOfTseytinTransformedClauses = 0;
+	protected int numberOfTseytinTransformedConstraints = 0;
+	protected int numberOfTseytinTransformedClauses = 0;
 
 	@Override
 	protected List<Substitute> tseytin(Formula child, InternalMonitor monitor) {

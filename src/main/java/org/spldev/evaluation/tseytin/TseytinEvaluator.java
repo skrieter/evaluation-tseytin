@@ -45,13 +45,17 @@ public class TseytinEvaluator extends Evaluator {
 
 	protected static final ListProperty<Integer> maxLiteralsProperty = new ListProperty<>("maxLiterals",
 		Property.IntegerConverter);
+	protected static final ListProperty<String> skipSharpSatProperty = new ListProperty<>("skipSharpSat",
+		Property.StringConverter);
+	protected static final Property<String> transformerProperty = new Property<>("transformer",
+		Property.StringConverter);
 
 	protected CSVWriter writer, systemWriter;
 	protected ProcessRunner processRunner;
 	private String systemName;
 	private int maxLiterals;
 	private Formula formula;
-	private String[] results = new String[11];
+	private final String[] results = new String[11];
 
 	@Override
 	public String getId() {
@@ -113,12 +117,12 @@ public class TseytinEvaluator extends Evaluator {
 		Logger.logInfo("Running for " + systemName + " " + maxLiterals);
 		tabFormatter.setTabLevel(2);
 		final TseytinAlgorithm algorithm = new TseytinAlgorithm(config.modelPath, systemName,
-			maxLiterals, systemIteration, config.tempPath, config.timeout.getValue());
+			maxLiterals, systemIteration, config.tempPath, config.timeout.getValue(), transformerProperty.getValue());
 		Arrays.fill(results, "NA");
 		runAlgorithm(algorithm, "model2cnf", 0);
 		runAlgorithm(algorithm, "sat", 5);
 		runAlgorithm(algorithm, "core", 7);
-		if (!(systemName.startsWith("linux") || systemName.startsWith("buildroot") || systemName.startsWith("freetz-ng")))
+		if (skipSharpSatProperty.getValue().stream().noneMatch(s -> systemName.startsWith(s)))
 			runAlgorithm(algorithm, "sharpsat", 9);
 	}
 
