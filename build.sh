@@ -10,9 +10,3 @@
 
 set -e
 mvn clean install
-
-#if [ ! -z "$1" ]; then
-#  echo $1 > config/models.txt
-#else
-#  cat config/all_models.txt > config/models.txt
-#fi
