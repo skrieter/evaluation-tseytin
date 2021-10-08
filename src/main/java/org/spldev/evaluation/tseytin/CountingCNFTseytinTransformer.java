@@ -13,10 +13,6 @@ public class CountingCNFTseytinTransformer extends CNFTransformer {
 	private int numberOfTseytinTransformedConstraints = 0;
 	private int numberOfTseytinTransformedClauses = 0;
 
-	public CountingCNFTseytinTransformer(int maximumNumberOfClauses, int maximumLengthOfClauses) {
-		super(maximumNumberOfClauses, maximumLengthOfClauses);
-	}
-
 	@Override
 	protected List<Substitute> tseytin(Formula child, InternalMonitor monitor) {
 		final TseytinTransformer tseytinTransformer = new TseytinTransformer();

@@ -121,8 +121,10 @@ public class TseytinRunner {
 	}
 
 	private static TransformResult transform(Formula formula) {
-		final CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer(
-			maximumNumberOfClauses, maximumLengthOfClauses);
+		final CountingCNFTseytinTransformer transformer = new CountingCNFTseytinTransformer();
+		transformer.setMaximumNumberOfClauses(maximumNumberOfClauses);
+		transformer.setMaximumLengthOfClauses(maximumLengthOfClauses);
+		transformer.setMaximumNumberOfLiterals(Integer.MAX_VALUE);
 		final long localTime = System.nanoTime();
 		formula = Executor.run(transformer, formula).orElse(Logger::logProblems);
 		final long timeNeeded = System.nanoTime() - localTime;
