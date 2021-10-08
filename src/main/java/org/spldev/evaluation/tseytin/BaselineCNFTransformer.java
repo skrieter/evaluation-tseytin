@@ -22,21 +22,31 @@
  */
 package org.spldev.evaluation.tseytin;
 
+import de.ovgu.featureide.fm.core.base.IFeatureModel;
+import de.ovgu.featureide.fm.core.init.FMCoreLibrary;
+import de.ovgu.featureide.fm.core.init.LibraryManager;
+import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager;
 import org.spldev.formula.expression.Expression;
 import org.spldev.formula.expression.Formula;
 import org.spldev.formula.expression.atomic.literal.VariableMap;
 import org.spldev.formula.expression.compound.And;
+import org.spldev.formula.expression.io.XmlFeatureModelFormat;
+import org.spldev.formula.expression.io.parse.FormulaFormat;
 import org.spldev.formula.expression.transform.CNFDistributiveLawTransformer;
 import org.spldev.formula.expression.transform.DistributiveLawTransformer.TransformException;
 import org.spldev.formula.expression.transform.NormalForms;
 import org.spldev.formula.expression.transform.NormalForms.NormalForm;
 import org.spldev.formula.solver.javasmt.CNFTseytinTransformer;
+import org.spldev.util.io.FileHandler;
 import org.spldev.util.job.Executor;
 import org.spldev.util.job.InternalMonitor;
 import org.spldev.util.job.NullMonitor;
 import org.spldev.util.logging.Logger;
 import org.spldev.util.tree.Trees;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -73,6 +83,19 @@ public class BaselineCNFTransformer extends CountingCNFTseytinTransformer {
 		cnfDistributiveLawTransformer.setMaximumNumberOfLiterals(maximumNumberOfLiterals);
 		return (And) cnfDistributiveLawTransformer.execute(child, monitor);
 
+//		try {
+//			Path tempPath = Files.createTempFile("formula_", ".xml");
+//			FileHandler.save(child, tempPath, new FormulaFormat());
+//			System.out.println(tempPath);
+//
+//			LibraryManager.registerLibrary(FMCoreLibrary.getInstance());
+//			final IFeatureModel featureModel = FeatureModelManager.load(tempPath);
+//			System.out.println(featureModel);
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+
+//		throw new RuntimeException();
 	}
 
 	protected And tseytin(Formula child) {
