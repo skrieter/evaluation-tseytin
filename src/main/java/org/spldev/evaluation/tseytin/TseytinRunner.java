@@ -25,6 +25,7 @@ package org.spldev.evaluation.tseytin;
 import java.io.*;
 import java.math.*;
 import java.nio.file.*;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
 
@@ -136,6 +137,17 @@ public class TseytinRunner {
 			}
 			break;
 		}
+		case "atomic": {
+			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
+			if (rep.isPresent()) {
+				final Result<Integer> result = execute(() -> atomic(rep.get()));
+				if (result != null) {
+					printResult(result.timeNeeded);
+					printResult(result.result);
+				}
+			}
+			break;
+		}
 		case "sharpsat": {
 			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
 			if (rep.isPresent()) {
@@ -177,6 +189,14 @@ public class TseytinRunner {
 		final LiteralList coreDead = coreDeadAnalysis.getResult(rep).orElseThrow();
 		final long timeNeeded = System.nanoTime() - localTime;
 		return new Result<>(coreDead.size(), timeNeeded);
+	}
+
+	private static Result<Integer> atomic(ModelRepresentation rep) {
+		final AtomicSetAnalysis atomicSetAnalysis = new AtomicSetAnalysis();
+		final long localTime = System.nanoTime();
+		final List<LiteralList> atomicSets = atomicSetAnalysis.getResult(rep).orElseThrow();
+		final long timeNeeded = System.nanoTime() - localTime;
+		return new Result<>(atomicSets.size(), timeNeeded);
 	}
 
 	private static Result<BigInteger> sharpsat(ModelRepresentation rep) {

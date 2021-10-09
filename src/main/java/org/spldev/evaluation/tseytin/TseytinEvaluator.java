@@ -55,7 +55,7 @@ public class TseytinEvaluator extends Evaluator {
 	private String systemName;
 	private int maxLiterals;
 	private Formula formula;
-	private final String[] results = new String[11];
+	private final String[] results = new String[13];
 	private int algorithmIteration;
 
 	@Override
@@ -74,7 +74,7 @@ public class TseytinEvaluator extends Evaluator {
 		writer = addCSVWriter("evaluation.csv",
 			Arrays.asList("ID", "MaxLiterals", "Iteration",
 				"TransformTime", "Variables", "Clauses", "TseytinClauses", "TseytinConstraints",
-				"SatTime", "Sat", "CoreTime", "Core", "SharpSatTime", "SharpSat"));
+				"SatTime", "Sat", "CoreTime", "Core", "AtomicTime", "Atomic", "SharpSatTime", "SharpSat"));
 		systemWriter = addCSVWriter("systems.csv", Arrays.asList("ID", "System", "Features", "Constraints"));
 	}
 
@@ -128,8 +128,9 @@ public class TseytinEvaluator extends Evaluator {
 		runAlgorithm(algorithm, "model2cnf", 0);
 		runAlgorithm(algorithm, "sat", 5);
 		runAlgorithm(algorithm, "core", 7);
+		runAlgorithm(algorithm, "atomic", 9);
 		if (skipSharpSatProperty.getValue().stream().noneMatch(s -> systemName.startsWith(s)))
-			runAlgorithm(algorithm, "sharpsat", 9);
+			runAlgorithm(algorithm, "sharpsat", 11);
 	}
 
 	private void runAlgorithm(final TseytinAlgorithm algorithm, final String name, int resultIndex) {
