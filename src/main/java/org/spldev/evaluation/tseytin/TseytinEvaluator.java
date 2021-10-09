@@ -56,6 +56,7 @@ public class TseytinEvaluator extends Evaluator {
 	private int maxLiterals;
 	private Formula formula;
 	private final String[] results = new String[11];
+	private int algorithmIteration;
 
 	@Override
 	public String getName() {
@@ -87,26 +88,30 @@ public class TseytinEvaluator extends Evaluator {
 		processRunner = new ProcessRunner();
 		processRunner.setTimeout(config.timeout.getValue());
 		final List<Integer> maxLiteralsValues = maxLiteralsProperty.getValue();
-		for (systemIndex = 0; systemIndex < systemIndexEnd; systemIndex++) {
-			systemName = config.systemNames.get(systemIndex);
-			formula = fmReader.read(systemName).orElseThrow(p -> new RuntimeException("no feature model"));
-			writeCSV(systemWriter, this::writeSystem);
-			for (systemIteration = 0; systemIteration < config.systemIterations.getValue(); systemIteration++) {
-				tabFormatter.setTabLevel(0);
-				logSystem();
-				tabFormatter.setTabLevel(1);
-				long lastMaxLiterals = Long.MAX_VALUE;
+		for (algorithmIteration = 0; algorithmIteration < config.algorithmIterations.getValue(); algorithmIteration++) {
+			for (systemIndex = 0; systemIndex < systemIndexEnd; systemIndex++) {
+				systemName = config.systemNames.get(systemIndex);
+				if (algorithmIteration == 0) {
+					formula = fmReader.read(systemName).orElseThrow(p -> new RuntimeException("no feature model"));
+					writeCSV(systemWriter, this::writeSystem);
+				}
+				for (systemIteration = 0; systemIteration < config.systemIterations.getValue(); systemIteration++) {
+					tabFormatter.setTabLevel(0);
+					logSystem();
+					tabFormatter.setTabLevel(1);
+					long lastMaxLiterals = Long.MAX_VALUE;
 
-				for (Integer maxLiteralsValue : maxLiteralsValues) {
-					maxLiterals = maxLiteralsValue;
-					if (maxLiterals >= lastMaxLiterals) {
-						Logger.logInfo("Skipping for " + systemName + " " + maxLiterals);
-					} else {
-						transform();
-						if ("NA".equals(results[0]) || "0".equals(results[4])) {
-							lastMaxLiterals = maxLiterals;
+					for (Integer maxLiteralsValue : maxLiteralsValues) {
+						maxLiterals = maxLiteralsValue;
+						if (maxLiterals >= lastMaxLiterals) {
+							Logger.logInfo("Skipping for " + systemName + " " + maxLiterals);
+						} else {
+							transform();
+							if ("NA".equals(results[0]) || "0".equals(results[4])) {
+								lastMaxLiterals = maxLiterals;
+							}
+							writeCSV(writer, this::writeResults);
 						}
-						writeCSV(writer, this::writeResults);
 					}
 				}
 			}
@@ -117,7 +122,8 @@ public class TseytinEvaluator extends Evaluator {
 		Logger.logInfo("Running for " + systemName + " " + maxLiterals);
 		tabFormatter.setTabLevel(2);
 		final TseytinAlgorithm algorithm = new TseytinAlgorithm(config.modelPath, systemName,
-			maxLiterals, systemIteration, config.tempPath, config.timeout.getValue(), transformerProperty.getValue());
+			maxLiterals, algorithmIteration + "_" + systemIteration, config.tempPath, config.timeout.getValue(),
+			transformerProperty.getValue());
 		Arrays.fill(results, "NA");
 		runAlgorithm(algorithm, "model2cnf", 0);
 		runAlgorithm(algorithm, "sat", 5);
@@ -137,7 +143,7 @@ public class TseytinEvaluator extends Evaluator {
 	private void writeResults(CSVWriter writer) {
 		writer.addValue(systemIndex);
 		writer.addValue(maxLiterals);
-		writer.addValue(systemIteration);
+		writer.addValue(algorithmIteration + "_" + systemIteration);
 		for (final String value : results) {
 			writer.addValue(value);
 		}

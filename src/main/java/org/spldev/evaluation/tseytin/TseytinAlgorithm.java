@@ -31,19 +31,19 @@ public class TseytinAlgorithm extends Algorithm<List<String>> {
 	private final Path modelPath;
 	private final String modelFile;
 	private final int maxLiterals;
-	private final int i;
+	private final String iteration;
 	private final Path tempPath;
 	private String stage;
 	private final ArrayList<String> results = new ArrayList<>();
 	private long timeout;
 	private String transformer;
 
-	public TseytinAlgorithm(Path modelPath, String modelFile, int maxLiterals, int i, Path tempPath,
+	public TseytinAlgorithm(Path modelPath, String modelFile, int maxLiterals, String iteration, Path tempPath,
 		long timeout, String transformer) {
 		this.modelPath = modelPath;
 		this.modelFile = modelFile;
 		this.maxLiterals = maxLiterals;
-		this.i = i;
+		this.iteration = iteration;
 		this.tempPath = tempPath;
 		this.timeout = timeout;
 		this.transformer = transformer;
@@ -64,7 +64,7 @@ public class TseytinAlgorithm extends Algorithm<List<String>> {
 		addCommandElement(modelPath.toString());
 		addCommandElement(modelFile);
 		addCommandElement(String.valueOf(maxLiterals));
-		addCommandElement(String.valueOf(i));
+		addCommandElement(String.valueOf(iteration));
 		addCommandElement(tempPath.toString());
 		addCommandElement(stage);
 		addCommandElement(String.valueOf(timeout));

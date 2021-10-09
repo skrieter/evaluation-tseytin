@@ -36,6 +36,7 @@ import org.spldev.formula.clauses.*;
 import org.spldev.formula.expression.*;
 import org.spldev.formula.expression.atomic.literal.*;
 import org.spldev.formula.expression.io.*;
+import org.spldev.util.Result;
 import org.spldev.util.extension.*;
 import org.spldev.util.io.*;
 import org.spldev.util.job.Executor;
@@ -70,7 +71,8 @@ public class TseytinRunner {
 	}
 
 	static String modelPathName, modelFileName, tempPath;
-	static int maxLiterals, i;
+	static int maxLiterals;
+	static String iteration;
 
 	static long timeout;
 
@@ -81,7 +83,7 @@ public class TseytinRunner {
 		modelPathName = args[0];
 		modelFileName = args[1];
 		maxLiterals = Integer.parseInt(args[2]);
-		i = Integer.parseInt(args[3]);
+		iteration = args[3];
 		tempPath = args[4];
 		final String stage = args[5];
 		timeout = Long.parseLong(args[6]);
@@ -113,29 +115,35 @@ public class TseytinRunner {
 			break;
 		}
 		case "sat": {
-			final ModelRepresentation rep = ModelRepresentation.load(getTempPath()).orElseThrow();
-			final Result<Boolean> result = execute(() -> sat(rep));
-			if (result != null) {
-				printResult(result.timeNeeded);
-				printResult(result.result);
+			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
+			if (rep.isPresent()) {
+				final Result<Boolean> result = execute(() -> sat(rep.get()));
+				if (result != null) {
+					printResult(result.timeNeeded);
+					printResult(result.result);
+				}
 			}
 			break;
 		}
 		case "core": {
-			final ModelRepresentation rep = ModelRepresentation.load(getTempPath()).orElseThrow();
-			final Result<Integer> result = execute(() -> core(rep));
-			if (result != null) {
-				printResult(result.timeNeeded);
-				printResult(result.result);
+			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
+			if (rep.isPresent()) {
+				final Result<Integer> result = execute(() -> core(rep.get()));
+				if (result != null) {
+					printResult(result.timeNeeded);
+					printResult(result.result);
+				}
 			}
 			break;
 		}
 		case "sharpsat": {
-			final ModelRepresentation rep = ModelRepresentation.load(getTempPath()).orElseThrow();
-			final Result<BigInteger> result = execute(() -> sharpsat(rep));
-			if (result != null) {
-				printResult(result.timeNeeded);
-				printResult(result.result);
+			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
+			if (rep.isPresent()) {
+				final Result<BigInteger> result = execute(() -> sharpsat(rep.get()));
+				if (result != null) {
+					printResult(result.timeNeeded);
+					printResult(result.result);
+				}
 			}
 			break;
 		}
@@ -204,7 +212,7 @@ public class TseytinRunner {
 		sb.append("_");
 		sb.append(maxLiterals);
 		sb.append("_");
-		sb.append(i);
+		sb.append(iteration);
 		sb.append(".dimacs");
 		return Paths.get(tempPath).resolve(sb.toString());
 	}
