@@ -201,6 +201,7 @@ public class TseytinRunner {
 
 	private static Result<BigInteger> sharpsat(ModelRepresentation rep) {
 		final CountSolutionsAnalysis countSolutionsAnalysis = new CountSolutionsAnalysis();
+		countSolutionsAnalysis.setTimeout((int) timeout);
 		countSolutionsAnalysis.setTimeout((int) (Math.ceil(timeout / 1000.0)));
 		final long localTime = System.nanoTime();
 		final BigInteger sharpSat = countSolutionsAnalysis.getResult(rep).get();
