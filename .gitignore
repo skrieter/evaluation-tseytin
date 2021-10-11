@@ -8,7 +8,7 @@ misc/
 /dependency-reduced-pom.xml
 models/
 *.iml
-*.jar*
+/*.jar*
 output
 .Rhistory
 libs

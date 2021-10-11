@@ -22,15 +22,21 @@
  */
 package org.spldev.evaluation.tseytin;
 
+import de.ovgu.featureide.fm.core.init.FMCoreLibrary;
+import de.ovgu.featureide.fm.core.init.LibraryManager;
+import org.prop4j.Node;
+import org.prop4j.Or;
 import org.spldev.formula.expression.Expression;
 import org.spldev.formula.expression.Formula;
 import org.spldev.formula.expression.atomic.literal.VariableMap;
 import org.spldev.formula.expression.compound.And;
-import org.spldev.formula.expression.transform.CNFDistributiveLawTransformer;
+import org.spldev.formula.expression.io.parse.NodeReader;
+import org.spldev.formula.expression.io.parse.NodeWriter;
 import org.spldev.formula.expression.transform.DistributiveLawTransformer.TransformException;
 import org.spldev.formula.expression.transform.NormalForms;
 import org.spldev.formula.expression.transform.NormalForms.NormalForm;
 import org.spldev.formula.solver.javasmt.CNFTseytinTransformer;
+import org.spldev.util.Result;
 import org.spldev.util.job.Executor;
 import org.spldev.util.job.InternalMonitor;
 import org.spldev.util.job.NullMonitor;
@@ -39,17 +45,19 @@ import org.spldev.util.tree.Trees;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 public class BaselineCNFTransformer extends CountingCNFTseytinTransformer {
 	VariableMap variableMap;
-//	NodeWriter spldevNodeWriter = new NodeWriter();
-//	Function<Node, org.prop4j.NodeWriter> featureideNodeWriter = org.prop4j.NodeWriter::new;
-//	NodeReader spldevNodeReader = new NodeReader();
-//	org.prop4j.NodeReader featureideNodeReader = new org.prop4j.NodeReader();
-//	{
-//		LibraryManager.registerLibrary(FMCoreLibrary.getInstance());
-//		featureideNodeReader.activateShortSymbols();
-//	}
+	NodeWriter spldevNodeWriter = new NodeWriter();
+	Function<Node, org.prop4j.NodeWriter> featureideNodeWriter = org.prop4j.NodeWriter::new;
+	NodeReader spldevNodeReader = new NodeReader();
+	org.prop4j.NodeReader featureideNodeReader = new org.prop4j.NodeReader();
+
+	{
+		LibraryManager.registerLibrary(FMCoreLibrary.getInstance());
+		featureideNodeReader.activateShortSymbols();
+	}
 
 	@Override
 	public Formula execute(Formula orgFormula, InternalMonitor monitor) {
@@ -71,31 +79,26 @@ public class BaselineCNFTransformer extends CountingCNFTseytinTransformer {
 		final Formula clonedChild = Trees.cloneTree(child);
 		try {
 			return distributive(clonedChild, new NullMonitor());
-		} catch (final TransformException e) {
+		} catch (final TransformException | Or.TransformException e) {
 			return tseytin(clonedChild);
 		}
 	}
 
 	protected And distributive(Formula child, InternalMonitor monitor) throws TransformException {
-		final CNFDistributiveLawTransformer cnfDistributiveLawTransformer = new CNFDistributiveLawTransformer();
-		cnfDistributiveLawTransformer.setMaximumNumberOfLiterals(maximumNumberOfLiterals);
-		return (And) cnfDistributiveLawTransformer.execute(child, monitor);
-
-		/*
-		 * String serializedFormula = spldevNodeWriter.write(child); Node node =
-		 * featureideNodeReader.stringToNode(serializedFormula); if (node == null) throw
-		 * new RuntimeException("constraint " + child +
-		 * " could not be read by FeatureIDE"); serializedFormula =
-		 * featureideNodeWriter.apply(node.toRegularCNF()).nodeToString(); // todo: add
-		 * threshold if (serializedFormula == null) throw new
-		 * RuntimeException("constraint " + child +
-		 * " could not be written by FeatureIDE"); Result<Formula> protoCnfFormula =
-		 * spldevNodeReader.read(serializedFormula); if (!protoCnfFormula.isPresent())
-		 * throw new RuntimeException("constraint " + child +
-		 * " could not be read by spldev"); Formula cnfFormula = new
-		 * CNFTransformer().execute(protoCnfFormula.get(), monitor); // todo: do this
-		 * faster return (And) cnfFormula;
-		 */
+		String serializedFormula = spldevNodeWriter.write(child);
+		Node node = featureideNodeReader.stringToNode(serializedFormula);
+		if (node == null)
+			throw new RuntimeException("constraint " + child + " could not be read by FeatureIDE");
+		Or.maximumNumberOfLiterals = maximumNumberOfLiterals;
+		Node cnf = node.toRegularCNF();
+		serializedFormula = featureideNodeWriter.apply(cnf).nodeToString();
+		if (serializedFormula == null)
+			throw new RuntimeException("constraint " + child + " could not be written by FeatureIDE");
+		Result<Formula> protoCnfFormula = spldevNodeReader.read(serializedFormula);
+		if (!protoCnfFormula.isPresent())
+			throw new RuntimeException("constraint " + child + " could not be read by spldev");
+		Formula cnfFormula = NormalForms.toClausalNF(NormalForms.simplifyForNF(protoCnfFormula.get()), NormalForm.CNF);
+		return (And) cnfFormula;
 	}
 
 	protected And tseytin(Formula child) {
@@ -104,7 +107,8 @@ public class BaselineCNFTransformer extends CountingCNFTseytinTransformer {
 			.reduce(0, Integer::sum);
 		for (String name : and.getVariableMap().getNames()) {
 			if (name.startsWith("k!")) {
-				String newName = name + "_" + numberOfTseytinTransformedConstraints;
+				String newName = name + "_" +
+					numberOfTseytinTransformedConstraints;
 				and.getVariableMap().renameVariable(name, newName);
 				variableMap.addBooleanVariable(newName);
 				and.getVariableMap().getVariable(newName).get().adaptVariableMap(variableMap);
