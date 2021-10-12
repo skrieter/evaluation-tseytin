@@ -105,15 +105,16 @@ public class BaselineCNFTransformer extends CountingCNFTseytinTransformer {
 		And and = (And) Executor.run(new CNFTseytinTransformer(), child).orElse(Logger::logProblems);
 		numberOfTseytinTransformedClauses += and.getChildren().stream().map(Expression::getChildren).map(List::size)
 			.reduce(0, Integer::sum);
-		for (String name : and.getVariableMap().getNames()) {
+		VariableMap variableMap = and.getVariableMap();
+		for (String name : variableMap.getNames()) {
 			if (name.startsWith("k!")) {
 				String newName = name + "_" +
 					numberOfTseytinTransformedConstraints;
-				and.getVariableMap().renameVariable(name, newName);
-				variableMap.addBooleanVariable(newName);
-				and.getVariableMap().getVariable(newName).get().adaptVariableMap(variableMap);
+				variableMap.renameVariable(name, newName);
+				this.variableMap.addBooleanVariable(newName);
 			}
 		}
+		and.adaptVariableMap(this.variableMap);
 		numberOfTseytinTransformedConstraints++;
 		return and;
 	}

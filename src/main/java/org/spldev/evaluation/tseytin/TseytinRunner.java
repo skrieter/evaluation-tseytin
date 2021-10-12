@@ -22,26 +22,31 @@
  */
 package org.spldev.evaluation.tseytin;
 
-import java.io.*;
-import java.math.*;
-import java.nio.file.*;
+import org.spldev.evaluation.util.ModelReader;
+import org.spldev.formula.ModelRepresentation;
+import org.spldev.formula.analysis.sat4j.AtomicSetAnalysis;
+import org.spldev.formula.analysis.sat4j.CoreDeadAnalysis;
+import org.spldev.formula.analysis.sat4j.HasSolutionAnalysis;
+import org.spldev.formula.analysis.sat4j.IndeterminateAnalysis;
+import org.spldev.formula.analysis.sharpsat.CountSolutionsAnalysis;
+import org.spldev.formula.clauses.LiteralList;
+import org.spldev.formula.expression.Formula;
+import org.spldev.formula.expression.atomic.literal.VariableMap;
+import org.spldev.formula.expression.io.DIMACSFormat;
+import org.spldev.formula.expression.io.FormulaFormatManager;
+import org.spldev.util.extension.ExtensionLoader;
+import org.spldev.util.io.FileHandler;
+import org.spldev.util.job.Executor;
+import org.spldev.util.logging.Logger;
+
+import java.io.IOException;
+import java.math.BigInteger;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.*;
 import java.util.function.Supplier;
-
-import org.spldev.evaluation.util.*;
-import org.spldev.formula.*;
-import org.spldev.formula.analysis.sat4j.*;
-import org.spldev.formula.analysis.sharpsat.CountSolutionsAnalysis;
-import org.spldev.formula.clauses.*;
-import org.spldev.formula.expression.*;
-import org.spldev.formula.expression.atomic.literal.*;
-import org.spldev.formula.expression.io.*;
-import org.spldev.util.Result;
-import org.spldev.util.extension.*;
-import org.spldev.util.io.*;
-import org.spldev.util.job.Executor;
-import org.spldev.util.logging.*;
+import java.util.stream.Collectors;
 
 public class TseytinRunner {
 	static Supplier<CountingCNFTseytinTransformer> transformerSupplier;
@@ -148,6 +153,17 @@ public class TseytinRunner {
 			}
 			break;
 		}
+		case "indeterminate": {
+			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
+			if (rep.isPresent()) {
+				final Result<Integer> result = execute(() -> indeterminate(rep.get()));
+				if (result != null) {
+					printResult(result.timeNeeded);
+					printResult(result.result);
+				}
+			}
+			break;
+		}
 		case "sharpsat": {
 			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
 			if (rep.isPresent()) {
@@ -183,8 +199,22 @@ public class TseytinRunner {
 		return new Result<>(sat, timeNeeded);
 	}
 
+	private static List<String> getTseytinFeatures(ModelRepresentation rep) {
+		return rep.getVariables().getNames().stream()
+			.filter(name -> name.startsWith("__temp__") || name.startsWith("k!"))
+			.collect(Collectors.toList());
+	}
+
+	private static List<String> getNotTseytinFeatures(ModelRepresentation rep) {
+		return rep.getVariables().getNames().stream()
+			.filter(name -> !name.startsWith("__temp__"))
+			.filter(name -> !name.startsWith("k!"))
+			.collect(Collectors.toList());
+	}
+
 	private static Result<Integer> core(ModelRepresentation rep) {
 		final CoreDeadAnalysis coreDeadAnalysis = new CoreDeadAnalysis();
+		coreDeadAnalysis.setVariables(LiteralList.getVariables(rep.getVariables(), getNotTseytinFeatures(rep)));
 		final long localTime = System.nanoTime();
 		final LiteralList coreDead = coreDeadAnalysis.getResult(rep).orElseThrow();
 		final long timeNeeded = System.nanoTime() - localTime;
@@ -194,9 +224,27 @@ public class TseytinRunner {
 	private static Result<Integer> atomic(ModelRepresentation rep) {
 		final AtomicSetAnalysis atomicSetAnalysis = new AtomicSetAnalysis();
 		final long localTime = System.nanoTime();
-		final List<LiteralList> atomicSets = atomicSetAnalysis.getResult(rep).orElseThrow();
+		List<LiteralList> atomicSets = atomicSetAnalysis.getResult(rep).orElseThrow();
+		LiteralList notTseytinFeatures = LiteralList.getLiterals(rep.getVariables(), getNotTseytinFeatures(rep));
+		atomicSets = atomicSets.stream()
+			.map(atomicSet -> atomicSet.retainAll(notTseytinFeatures))
+			.filter(atomicSet -> !atomicSet.isEmpty())
+			.collect(Collectors.toList());
 		final long timeNeeded = System.nanoTime() - localTime;
 		return new Result<>(atomicSets.size(), timeNeeded);
+	}
+
+	private static Result<Integer> indeterminate(ModelRepresentation rep) {
+		final IndeterminateAnalysis indeterminateAnalysis = new IndeterminateAnalysis();
+		final long localTime = System.nanoTime();
+		LiteralList indeterminate = indeterminateAnalysis.getResult(rep).orElseThrow();
+		System.err.printf("got %d/%d indeterminate Tseytin features%n",
+			indeterminate.retainAll(LiteralList.getLiterals(rep.getVariables(), getTseytinFeatures(rep))).size(),
+			getTseytinFeatures(rep).size());
+		indeterminate = indeterminate.retainAll(LiteralList.getLiterals(rep.getVariables(), getNotTseytinFeatures(
+			rep)));
+		final long timeNeeded = System.nanoTime() - localTime;
+		return new Result<>(indeterminate.size(), timeNeeded);
 	}
 
 	private static Result<BigInteger> sharpsat(ModelRepresentation rep) {
