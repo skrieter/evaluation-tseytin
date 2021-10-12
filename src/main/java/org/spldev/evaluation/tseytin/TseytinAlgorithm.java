@@ -59,7 +59,7 @@ public class TseytinAlgorithm extends Algorithm<List<String>> {
 		addCommandElement("-da");
 		addCommandElement("-Xmx12g");
 		addCommandElement("-cp");
-		addCommandElement(System.getProperty("java.class.path"));
+		addCommandElement(System.getProperty("java.class.path") + ":ext-libs/*");
 		addCommandElement(TseytinRunner.class.getCanonicalName());
 		addCommandElement(modelPath.toString());
 		addCommandElement(modelFile);
