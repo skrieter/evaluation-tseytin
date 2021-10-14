@@ -214,7 +214,11 @@ public class TseytinRunner {
 
 	private static Result<Integer> core(ModelRepresentation rep) {
 		final CoreDeadAnalysis coreDeadAnalysis = new CoreDeadAnalysis();
-		coreDeadAnalysis.setVariables(LiteralList.getVariables(rep.getVariables(), getNotTseytinFeatures(rep)));
+		// todo: we can calculate this for ALL features, or only the non-Tseytin
+		// features. But it should be comparable
+		// to the atomic sets! (is there any difference anyway?)
+		// coreDeadAnalysis.setVariables(LiteralList.getVariables(rep.getVariables(),
+		// getNotTseytinFeatures(rep)));
 		final long localTime = System.nanoTime();
 		final LiteralList coreDead = coreDeadAnalysis.getResult(rep).orElseThrow();
 		final long timeNeeded = System.nanoTime() - localTime;
@@ -223,6 +227,7 @@ public class TseytinRunner {
 
 	private static Result<Integer> atomic(ModelRepresentation rep) {
 		final AtomicSetAnalysis atomicSetAnalysis = new AtomicSetAnalysis();
+		// todo: maybe only calculate this for non-tseytin variables?
 		final long localTime = System.nanoTime();
 		List<LiteralList> atomicSets = atomicSetAnalysis.getResult(rep).orElseThrow();
 		LiteralList notTseytinFeatures = LiteralList.getLiterals(rep.getVariables(), getNotTseytinFeatures(rep));
@@ -234,6 +239,7 @@ public class TseytinRunner {
 		return new Result<>(atomicSets.size(), timeNeeded);
 	}
 
+	// todo: indeterminate analysis is currently not implemented correctly, AFAIK
 	private static Result<Integer> indeterminate(ModelRepresentation rep) {
 		final IndeterminateAnalysis indeterminateAnalysis = new IndeterminateAnalysis();
 		final long localTime = System.nanoTime();
