@@ -220,8 +220,10 @@ public class TseytinRunner {
 		// coreDeadAnalysis.setVariables(LiteralList.getVariables(rep.getVariables(),
 		// getNotTseytinFeatures(rep)));
 		final long localTime = System.nanoTime();
-		final LiteralList coreDead = coreDeadAnalysis.getResult(rep).orElseThrow();
+		LiteralList coreDead = coreDeadAnalysis.getResult(rep).orElseThrow();
 		final long timeNeeded = System.nanoTime() - localTime;
+		LiteralList notTseytinFeatures = LiteralList.getLiterals(rep.getVariables(), getNotTseytinFeatures(rep));
+		coreDead = coreDead.retainAll(notTseytinFeatures);
 		return new Result<>(coreDead.size(), timeNeeded);
 	}
 
@@ -230,12 +232,12 @@ public class TseytinRunner {
 		// todo: maybe only calculate this for non-tseytin variables?
 		final long localTime = System.nanoTime();
 		List<LiteralList> atomicSets = atomicSetAnalysis.getResult(rep).orElseThrow();
+		final long timeNeeded = System.nanoTime() - localTime;
 		LiteralList notTseytinFeatures = LiteralList.getLiterals(rep.getVariables(), getNotTseytinFeatures(rep));
 		atomicSets = atomicSets.stream()
 			.map(atomicSet -> atomicSet.retainAll(notTseytinFeatures))
 			.filter(atomicSet -> !atomicSet.isEmpty())
 			.collect(Collectors.toList());
-		final long timeNeeded = System.nanoTime() - localTime;
 		return new Result<>(atomicSets.size(), timeNeeded);
 	}
 
@@ -244,12 +246,12 @@ public class TseytinRunner {
 		final IndeterminateAnalysis indeterminateAnalysis = new IndeterminateAnalysis();
 		final long localTime = System.nanoTime();
 		LiteralList indeterminate = indeterminateAnalysis.getResult(rep).orElseThrow();
+		final long timeNeeded = System.nanoTime() - localTime;
 		System.err.printf("got %d/%d indeterminate Tseytin features%n",
 			indeterminate.retainAll(LiteralList.getLiterals(rep.getVariables(), getTseytinFeatures(rep))).size(),
 			getTseytinFeatures(rep).size());
 		indeterminate = indeterminate.retainAll(LiteralList.getLiterals(rep.getVariables(), getNotTseytinFeatures(
 			rep)));
-		final long timeNeeded = System.nanoTime() - localTime;
 		return new Result<>(indeterminate.size(), timeNeeded);
 	}
 
