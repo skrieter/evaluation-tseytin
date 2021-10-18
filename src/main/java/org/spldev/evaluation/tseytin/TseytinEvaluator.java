@@ -76,7 +76,9 @@ public class TseytinEvaluator extends Evaluator {
 		for (systemIteration = 0; systemIteration < config.systemIterations.getValue(); systemIteration++) {
 			for (systemIndex = 0; systemIndex < config.systemNames.size(); systemIndex++) {
 				String modelPath = config.systemNames.get(systemIndex);
-				String system = modelPath.replace(".kconfigreader.model", "");
+				String system = modelPath
+					.replace(".kconfigreader.model", "")
+					.replace(".xml", "");
 				if (systemIteration == 0) {
 					Formula formula = fmReader.read(modelPath).orElseThrow(p -> new RuntimeException(
 						"no feature model"));

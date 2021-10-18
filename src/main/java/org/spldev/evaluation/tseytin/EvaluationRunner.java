@@ -26,11 +26,12 @@ import de.ovgu.featureide.fm.core.analysis.cnf.CNF;
 import de.ovgu.featureide.fm.core.analysis.cnf.LiteralSet;
 import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula;
 import de.ovgu.featureide.fm.core.base.IFeatureModel;
+import de.ovgu.featureide.fm.core.base.impl.FMFormatManager;
 import de.ovgu.featureide.fm.core.init.FMCoreLibrary;
 import de.ovgu.featureide.fm.core.init.LibraryManager;
+import de.ovgu.featureide.fm.core.io.dimacs.DIMACSFormatCNF;
 import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager;
 import de.ovgu.featureide.fm.core.job.monitor.NullMonitor;
-import org.prop4j.Node;
 import org.spldev.evaluation.util.ModelReader;
 import org.spldev.formula.ModelRepresentation;
 import org.spldev.formula.analysis.sat4j.AtomicSetAnalysis;
@@ -42,10 +43,7 @@ import org.spldev.formula.expression.Formula;
 import org.spldev.formula.expression.atomic.literal.VariableMap;
 import org.spldev.formula.expression.io.DIMACSFormat;
 import org.spldev.formula.expression.io.FormulaFormatManager;
-import org.spldev.formula.expression.io.parse.NodeReader;
-import org.spldev.formula.expression.io.parse.NodeWriter;
 import org.spldev.formula.expression.transform.CNFTransformer;
-import org.spldev.formula.expression.transform.NormalForms;
 import org.spldev.formula.expression.transform.Transformer;
 import org.spldev.formula.solver.javasmt.CNFTseytinTransformer;
 import org.spldev.util.data.Pair;
@@ -56,13 +54,13 @@ import org.spldev.util.logging.Logger;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class EvaluationRunner {
@@ -79,11 +77,14 @@ public class EvaluationRunner {
 			throw new RuntimeException("invalid usage");
 		}
 		ExtensionLoader.load();
+		LibraryManager.registerLibrary(FMCoreLibrary.getInstance());
+		FMFormatManager.getInstance().addExtension(new KconfigReaderFormat());
 		parameters = EvaluationWrapper.Parameters.read(Paths.get(args[0]));
 		Objects.requireNonNull(parameters);
 		System.out.println(parameters);
 
-		if (parameters.analysisAlgorithm == EvaluationWrapper.AnalysisAlgorithm.TRANSFORM) {
+		if (parameters.analysisAlgorithm == EvaluationWrapper.AnalysisAlgorithm.TRANSFORM) { // todo: always call
+																								// simplify for NF?
 			if (parameters.transformationAlgorithm == EvaluationWrapper.TransformationAlgorithm.TSEYTIN_Z3) {
 				Formula formula = readFormula(Paths.get(parameters.modelPath));
 				processFormulaResult(executeTransformer(formula, new CNFTseytinTransformer()));
@@ -95,35 +96,22 @@ public class EvaluationRunner {
 				transformer.setMaximumNumberOfLiterals(0);
 				processFormulaResult(executeTransformer(formula, transformer));
 			} else if (parameters.transformationAlgorithm == EvaluationWrapper.TransformationAlgorithm.DISTRIB_FEATUREIDE) {
-				// this throws for large models (stack overflow) ... maybe save as xml and load
-				// again?
-				Formula formula = readFormula(Paths.get(parameters.modelPath));
-				LibraryManager.registerLibrary(FMCoreLibrary.getInstance());
-				NodeWriter spldevNodeWriter = new NodeWriter();
-				Function<Node, org.prop4j.NodeWriter> featureideNodeWriter = org.prop4j.NodeWriter::new;
-				NodeReader spldevNodeReader = new NodeReader();
-				org.prop4j.NodeReader featureideNodeReader = new org.prop4j.NodeReader();
-				featureideNodeReader.activateShortSymbols();
-				String serializedFormula = spldevNodeWriter.write(formula);
-				Node node = featureideNodeReader.stringToNode(serializedFormula);
-				if (node == null)
-					throw new RuntimeException("formula could not be read by FeatureIDE");
-				Result<Node> result = execute(() -> {
-					final long localTime = System.nanoTime();
-					Node cnf = node.toRegularCNF();
-					final long timeNeeded = System.nanoTime() - localTime;
-					return new Result<>(timeNeeded, cnf);
-				});
-				if (result != null) {
-					serializedFormula = featureideNodeWriter.apply(result.getValue()).nodeToString();
-					if (serializedFormula == null)
-						throw new RuntimeException("formula could not be written by FeatureIDE");
-					org.spldev.util.Result<Formula> protoCnfFormula = spldevNodeReader.read(serializedFormula);
-					if (!protoCnfFormula.isPresent())
-						throw new RuntimeException("formula could not be read by spldev");
-					Formula cnfFormula = NormalForms.toClausalNF(NormalForms.simplifyForNF(protoCnfFormula.get()),
-						NormalForms.NormalForm.CNF);
-					processFormulaResult(new Result<>(result.getKey(), cnfFormula));
+				final IFeatureModel featureModel = FeatureModelManager.load(Paths.get(parameters.rootPath).resolve(
+					parameters.modelPath));
+				if (featureModel != null) {
+					Result<CNF> result = execute(() -> {
+						final long localTime = System.nanoTime();
+						CNF cnf = new FeatureModelFormula(featureModel).getCNF();
+						final long timeNeeded = System.nanoTime() - localTime;
+						return new Result<>(timeNeeded, cnf);
+					});
+					if (result != null) {
+						printResult(result.getKey());
+						printResult(result.getValue().getVariables().size());
+						printResult(result.getValue().getClauses().size());
+						de.ovgu.featureide.fm.core.io.manager.FileHandler.save(getTempPath(), result.getValue(),
+							new DIMACSFormatCNF());
+					}
 				}
 			} else if (parameters.transformationAlgorithm == EvaluationWrapper.TransformationAlgorithm.DISTRIB_SPLDEV) {
 				Formula formula = readFormula(Paths.get(parameters.modelPath));
@@ -136,22 +124,23 @@ public class EvaluationRunner {
 				throw new RuntimeException("invalid algorithm");
 			}
 		} else if (parameters.analysisAlgorithm == EvaluationWrapper.AnalysisAlgorithm.SAT_FEATUREIDE) {
-			LibraryManager.registerLibrary(FMCoreLibrary.getInstance());
-			final IFeatureModel featureModel = FeatureModelManager.load(getTempPath());
-			if (featureModel != null) {
-				CNF cnf = new FeatureModelFormula(featureModel).getCNF(); // todo: can this be done faster?
-				printResult(execute(() -> {
-					final long localTime = System.nanoTime();
-					Boolean sat = null;
-					try {
-						sat = new de.ovgu.featureide.fm.core.analysis.cnf.analysis.HasSolutionAnalysis(cnf)
-							.analyze(new NullMonitor<>());
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-					final long timeNeeded = System.nanoTime() - localTime;
-					return new Result<>(timeNeeded, sat);
-				}));
+			if (Files.exists(getTempPath())) {
+				final IFeatureModel featureModel = FeatureModelManager.load(getTempPath());
+				if (featureModel != null) {
+					CNF cnf = new FeatureModelFormula(featureModel).getCNF(); // todo: can this be done faster?
+					printResult(execute(() -> {
+						final long localTime = System.nanoTime();
+						Boolean sat = null;
+						try {
+							sat = new de.ovgu.featureide.fm.core.analysis.cnf.analysis.HasSolutionAnalysis(cnf)
+								.analyze(new NullMonitor<>());
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+						final long timeNeeded = System.nanoTime() - localTime;
+						return new Result<>(timeNeeded, sat);
+					}));
+				}
 			}
 		} else if (parameters.analysisAlgorithm == EvaluationWrapper.AnalysisAlgorithm.SAT_SPLDEV) {
 			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
@@ -165,26 +154,29 @@ public class EvaluationRunner {
 				}));
 			}
 		} else if (parameters.analysisAlgorithm == EvaluationWrapper.AnalysisAlgorithm.CORE_DEAD_FEATUREIDE) {
-			LibraryManager.registerLibrary(FMCoreLibrary.getInstance());
-			final IFeatureModel featureModel = FeatureModelManager.load(getTempPath());
-			if (featureModel != null) {
-				CNF cnf = new FeatureModelFormula(featureModel).getCNF(); // todo: can this be done faster?
-				printResult(execute(() -> {
-					final long localTime = System.nanoTime();
-					LiteralSet coreDead = null;
-					try {
-						coreDead = new de.ovgu.featureide.fm.core.analysis.cnf.analysis.CoreDeadAnalysis(cnf)
-							.analyze(new NullMonitor<>());
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-					final long timeNeeded = System.nanoTime() - localTime;
-					if (coreDead == null)
-						return null;
-					coreDead = coreDead.retainAll(cnf.getVariables().convertToLiterals(getNonTseytinFeatures(cnf), true,
-						true));
-					return new Result<>(timeNeeded, coreDead.size());
-				}));
+			if (Files.exists(getTempPath())) {
+				final IFeatureModel featureModel = FeatureModelManager.load(getTempPath());
+				if (featureModel != null) {
+					CNF cnf = new FeatureModelFormula(featureModel).getCNF(); // todo: can this be done faster?
+					printResult(execute(() -> {
+						final long localTime = System.nanoTime();
+						LiteralSet coreDead = null;
+						try {
+							coreDead = new de.ovgu.featureide.fm.core.analysis.cnf.analysis.CoreDeadAnalysis(cnf)
+								.analyze(new NullMonitor<>());
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+						final long timeNeeded = System.nanoTime() - localTime;
+						if (coreDead == null)
+							return null;
+						coreDead = coreDead.retainAll(cnf.getVariables().convertToLiterals(getNonTseytinFeatures(cnf),
+							true,
+							true));
+						// todo: recalculate variables
+						return new Result<>(timeNeeded, coreDead.size());
+					}));
+				}
 			}
 		} else if (parameters.analysisAlgorithm == EvaluationWrapper.AnalysisAlgorithm.CORE_DEAD_SPLDEV) {
 			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
@@ -205,30 +197,31 @@ public class EvaluationRunner {
 				}));
 			}
 		} else if (parameters.analysisAlgorithm == EvaluationWrapper.AnalysisAlgorithm.ATOMIC_SET_FEATUREIDE) {
-			LibraryManager.registerLibrary(FMCoreLibrary.getInstance());
-			final IFeatureModel featureModel = FeatureModelManager.load(getTempPath());
-			if (featureModel != null) {
-				CNF cnf = new FeatureModelFormula(featureModel).getCNF(); // todo: can this be done faster?
-				printResult(execute(() -> {
-					final long localTime = System.nanoTime();
-					List<LiteralSet> atomicSets = null;
-					try {
-						atomicSets = new de.ovgu.featureide.fm.core.analysis.cnf.analysis.AtomicSetAnalysis(cnf)
-							.analyze(new NullMonitor<>());
-					} catch (Exception e) {
-						e.printStackTrace();
-					}
-					final long timeNeeded = System.nanoTime() - localTime;
-					if (atomicSets == null)
-						return null;
-					LiteralSet nonTseytinFeatures = cnf.getVariables().convertToLiterals(getNonTseytinFeatures(cnf),
-						true, true);
-					atomicSets = atomicSets.stream()
-						.map(atomicSet -> atomicSet.retainAll(nonTseytinFeatures))
-						.filter(atomicSet -> !atomicSet.isEmpty())
-						.collect(Collectors.toList());
-					return new Result<>(timeNeeded, atomicSets.size());
-				}));
+			if (Files.exists(getTempPath())) {
+				final IFeatureModel featureModel = FeatureModelManager.load(getTempPath());
+				if (featureModel != null) {
+					CNF cnf = new FeatureModelFormula(featureModel).getCNF(); // todo: can this be done faster?
+					printResult(execute(() -> {
+						final long localTime = System.nanoTime();
+						List<LiteralSet> atomicSets = null;
+						try {
+							atomicSets = new de.ovgu.featureide.fm.core.analysis.cnf.analysis.AtomicSetAnalysis(cnf)
+								.analyze(new NullMonitor<>());
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+						final long timeNeeded = System.nanoTime() - localTime;
+						if (atomicSets == null)
+							return null;
+						LiteralSet nonTseytinFeatures = cnf.getVariables().convertToLiterals(getNonTseytinFeatures(cnf),
+							true, true);
+						atomicSets = atomicSets.stream()
+							.map(atomicSet -> atomicSet.retainAll(nonTseytinFeatures))
+							.filter(atomicSet -> !atomicSet.isEmpty())
+							.collect(Collectors.toList());
+						return new Result<>(timeNeeded, atomicSets.size());
+					}));
+				}
 			}
 		} else if (parameters.analysisAlgorithm == EvaluationWrapper.AnalysisAlgorithm.ATOMIC_SET_SPLDEV) {
 			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
@@ -248,7 +241,8 @@ public class EvaluationRunner {
 					return new Result<>(timeNeeded, atomicSets.size());
 				}));
 			}
-		} else if (parameters.analysisAlgorithm == EvaluationWrapper.AnalysisAlgorithm.SHARP_SAT) {
+		} else if (parameters.analysisAlgorithm == EvaluationWrapper.AnalysisAlgorithm.SHARP_SAT) { // todo: call
+																									// directly
 			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
 			final CountSolutionsAnalysis countSolutionsAnalysis = new CountSolutionsAnalysis();
 			countSolutionsAnalysis.setTimeout((int) (Math.ceil(parameters.timeout) / 1000.0));
