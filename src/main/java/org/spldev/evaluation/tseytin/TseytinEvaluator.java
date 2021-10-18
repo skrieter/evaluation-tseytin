@@ -58,9 +58,9 @@ public class TseytinEvaluator extends Evaluator {
 		List<String> resultColumns = new ArrayList<>();
 		resultColumns.add("ID");
 		resultColumns.add("Iteration");
-		resultColumns.add("Algorithm");
-		EvaluationWrapper.algorithmResultColumns.forEach(algorithmPair -> resultColumns.addAll(Arrays.asList(
-			algorithmPair.getValue())));
+		resultColumns.add("Transformation");
+		Analysis.resultColumns.forEach(analysisPair -> resultColumns.addAll(Arrays.asList(
+			analysisPair.getValue())));
 		writer = addCSVWriter("evaluation.csv", resultColumns);
 		systemWriter = addCSVWriter("systems.csv", Arrays.asList("ID", "System", "Features", "Constraints"));
 	}
@@ -89,18 +89,19 @@ public class TseytinEvaluator extends Evaluator {
 						systemWriter.addValue(NormalForms.simplifyForNF(formula).getChildren().size());
 					});
 				}
-				EvaluationWrapper.Parameters parameters = new EvaluationWrapper.Parameters(
+				Parameters parameters = new Parameters(
 					system, config.modelPath.toString(),
 					modelPath, systemIteration, config.tempPath.toString(), config.timeout.getValue());
 				tabFormatter.setTabLevel(0);
 				logSystem();
 				tabFormatter.setTabLevel(1);
-				Arrays.stream(EvaluationWrapper.transformationAlgorithms).forEach(transformationAlgorithm -> {
-					List<String> results = evaluateForParameters(parameters, transformationAlgorithm);
+				Analysis.transformations.forEach(transformationFunction -> {
+					Analysis transformations = transformationFunction.apply(parameters);
+					List<String> results = evaluateForParameters(parameters, transformations);
 					writeCSV(writer, writer -> {
 						writer.addValue(systemIndex);
 						writer.addValue(systemIteration);
-						writer.addValue(transformationAlgorithm);
+						writer.addValue(transformations.toString());
 						results.forEach(writer::addValue);
 					});
 				});
@@ -108,40 +109,31 @@ public class TseytinEvaluator extends Evaluator {
 		}
 	}
 
-	private List<String> evaluateForParameters(EvaluationWrapper.Parameters parameters,
-		EvaluationWrapper.TransformationAlgorithm transformationAlgorithm) {
+	private List<String> evaluateForParameters(Parameters parameters, Analysis transformation) {
 		tabFormatter.setTabLevel(2);
 		List<String> results = new ArrayList<>();
-		final EvaluationWrapper evaluationWrapper = new EvaluationWrapper(parameters);
-		results.addAll(run(evaluationWrapper, transformationAlgorithm, EvaluationWrapper.AnalysisAlgorithm.TRANSFORM));
-		results.addAll(run(evaluationWrapper, transformationAlgorithm,
-			EvaluationWrapper.AnalysisAlgorithm.SAT_FEATUREIDE));
-		results.addAll(run(evaluationWrapper, transformationAlgorithm, EvaluationWrapper.AnalysisAlgorithm.SAT_SPLDEV));
-		results.addAll(run(evaluationWrapper, transformationAlgorithm,
-			EvaluationWrapper.AnalysisAlgorithm.CORE_DEAD_FEATUREIDE));
-		results.addAll(run(evaluationWrapper, transformationAlgorithm,
-			EvaluationWrapper.AnalysisAlgorithm.CORE_DEAD_SPLDEV));
-		results.addAll(run(evaluationWrapper, transformationAlgorithm,
-			EvaluationWrapper.AnalysisAlgorithm.ATOMIC_SET_FEATUREIDE));
-		results.addAll(run(evaluationWrapper, transformationAlgorithm,
-			EvaluationWrapper.AnalysisAlgorithm.ATOMIC_SET_SPLDEV));
+		results.addAll(run(new Analysis.Transform(parameters), transformation));
+		results.addAll(run(new Analysis.SatFeatureIDE(parameters), transformation));
+		results.addAll(run(new Analysis.SatSPLDev(parameters), transformation));
+		results.addAll(run(new Analysis.CoreDeadFeatureIDE(parameters), transformation));
+		results.addAll(run(new Analysis.CoreDeadSPLDev(parameters), transformation));
+		results.addAll(run(new Analysis.AtomicSetFeatureIDE(parameters), transformation));
+		results.addAll(run(new Analysis.AtomicSetSPLDev(parameters), transformation));
 		if (skipSharpSatProperty.getValue().stream().noneMatch(s -> parameters.modelPath.startsWith(s)))
-			results.addAll(run(evaluationWrapper, transformationAlgorithm,
-				EvaluationWrapper.AnalysisAlgorithm.SHARP_SAT));
+			results.addAll(run(new Analysis.SharpSat(parameters), transformation));
 		else
-			results.addAll(Arrays.stream(EvaluationWrapper.AnalysisAlgorithm.SHARP_SAT.getResultColumns())
+			results.addAll(Arrays.stream(new Analysis.SharpSat(null).getResultColumns())
 				.map(c -> "NA").collect(Collectors.toList()));
+		results.addAll(run(new Analysis.CountAntom(parameters), transformation)); // todo: automate addAll
 		return results;
 	}
 
-	private List<String> run(EvaluationWrapper evaluationWrapper,
-		EvaluationWrapper.TransformationAlgorithm transformationAlgorithm,
-		EvaluationWrapper.AnalysisAlgorithm analysisAlgorithm) {
-		evaluationWrapper.setTransformationAlgorithm(transformationAlgorithm);
-		evaluationWrapper.setAnalysisAlgorithm(analysisAlgorithm);
+	private List<String> run(Analysis analysis, Analysis transformation) {
+		Wrapper wrapper = new Wrapper(analysis);
+		wrapper.setTransformation(transformation);
 		tabFormatter.incTabLevel();
-		List<String> results = processRunner.run(evaluationWrapper).getResult();
-		while (results.size() < analysisAlgorithm.getResultColumns().length)
+		List<String> results = processRunner.run(wrapper).getResult();
+		while (results.size() < wrapper.analysis.getResultColumns().length)
 			results.add("NA");
 		tabFormatter.decTabLevel();
 		return results;
