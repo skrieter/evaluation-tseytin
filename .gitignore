@@ -9,6 +9,6 @@ misc/
 models/
 *.iml
 /*.jar*
-output
+output*
 .Rhistory
 libs
