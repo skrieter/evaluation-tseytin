@@ -26,6 +26,7 @@ import java.nio.file.*;
 import java.util.*;
 
 import org.spldev.evaluation.process.*;
+import org.spldev.evaluation.tseytin.analysis.Analysis;
 
 public class Wrapper extends Algorithm<List<String>> {
 	public static final String RESULT_PREFIX = "result: ";

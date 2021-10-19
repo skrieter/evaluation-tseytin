@@ -27,6 +27,7 @@ import java.util.*;
 
 import org.spldev.evaluation.*;
 import org.spldev.evaluation.process.*;
+import org.spldev.evaluation.tseytin.analysis.Analysis;
 import org.spldev.evaluation.util.*;
 import org.spldev.formula.expression.*;
 import org.spldev.formula.expression.atomic.literal.*;

@@ -25,6 +25,7 @@ package org.spldev.evaluation.tseytin;
 import de.ovgu.featureide.fm.core.base.impl.FMFormatManager;
 import de.ovgu.featureide.fm.core.init.FMCoreLibrary;
 import de.ovgu.featureide.fm.core.init.LibraryManager;
+import org.spldev.evaluation.tseytin.analysis.Analysis;
 import org.spldev.util.extension.ExtensionLoader;
 
 import java.nio.file.Paths;

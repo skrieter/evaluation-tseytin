@@ -1,5 +1,7 @@
 package org.spldev.evaluation.tseytin;
 
+import org.spldev.evaluation.tseytin.analysis.Analysis;
+
 import java.io.Serializable;
 
 public class Parameters implements Serializable {
