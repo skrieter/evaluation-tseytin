@@ -40,6 +40,7 @@ public class KConfigReaderFormat extends AFeatureModelFormat {
 			.filter(l -> !l.isEmpty()) //
 			.filter(l -> !l.startsWith("#")) //
 			.filter(l -> !l.contains("=")) //
+			.map(l -> l.replace("-", "_"))
 			.map(l -> l.replaceAll("def\\((\\w+)\\)", "$1"))
 			.map(nodeReader::stringToNode) //
 			.filter(Objects::nonNull) // ignore non-Boolean constraints
