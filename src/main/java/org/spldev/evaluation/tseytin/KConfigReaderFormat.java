@@ -15,7 +15,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class KconfigReaderFormat extends AFeatureModelFormat {
+public class KConfigReaderFormat extends AFeatureModelFormat {
 	static class KconfigNodeReader extends NodeReader {
 		KconfigNodeReader() {
 			try {
@@ -28,7 +28,7 @@ public class KconfigReaderFormat extends AFeatureModelFormat {
 		}
 	}
 
-	public static final String ID = PluginID.PLUGIN_ID + ".format.fm." + KconfigReaderFormat.class.getSimpleName();
+	public static final String ID = PluginID.PLUGIN_ID + ".format.fm." + KConfigReaderFormat.class.getSimpleName();
 
 	@Override
 	public ProblemList read(IFeatureModel featureModel, CharSequence source) {
@@ -82,7 +82,7 @@ public class KconfigReaderFormat extends AFeatureModelFormat {
 	}
 
 	@Override
-	public KconfigReaderFormat getInstance() {
+	public KConfigReaderFormat getInstance() {
 		return this;
 	}
 
