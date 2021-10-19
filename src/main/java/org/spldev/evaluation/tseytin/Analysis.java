@@ -12,17 +12,14 @@ import org.spldev.formula.ModelRepresentation;
 import org.spldev.formula.analysis.sat4j.AtomicSetAnalysis;
 import org.spldev.formula.analysis.sat4j.CoreDeadAnalysis;
 import org.spldev.formula.analysis.sat4j.HasSolutionAnalysis;
-import org.spldev.formula.analysis.sharpsat.CountSolutionsAnalysis;
 import org.spldev.formula.clauses.LiteralList;
 import org.spldev.formula.expression.Formula;
-import org.spldev.formula.expression.atomic.VariableAssignment;
 import org.spldev.formula.expression.atomic.literal.VariableMap;
 import org.spldev.formula.expression.io.DIMACSFormat;
 import org.spldev.formula.expression.io.FormulaFormatManager;
 import org.spldev.formula.expression.transform.CNFTransformer;
 import org.spldev.formula.expression.transform.Transformer;
 import org.spldev.formula.solver.javasmt.CNFTseytinTransformer;
-import org.spldev.formula.solver.sharpsat.SharpSatSolverFormula;
 import org.spldev.util.data.Pair;
 import org.spldev.util.io.FileHandler;
 import org.spldev.util.job.Executor;
@@ -499,8 +496,6 @@ abstract class Analysis implements Runnable, Serializable {
 		@Override
 		public void run() {
 			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
-			final CountSolutionsAnalysis countSolutionsAnalysis = new CountSolutionsAnalysis();
-			countSolutionsAnalysis.setTimeout((int) (Math.ceil(parameters.timeout) / 1000.0));
 			if (rep.isPresent()) {
 				final String[] command = new String[6];
 				command[0] = "ext-libs/sharpSAT";
@@ -548,12 +543,10 @@ abstract class Analysis implements Runnable, Serializable {
 		@Override
 		public void run() {
 			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
-			final CountSolutionsAnalysis countSolutionsAnalysis = new CountSolutionsAnalysis();
-			countSolutionsAnalysis.setTimeout((int) (Math.ceil(parameters.timeout) / 1000.0));
 			if (rep.isPresent()) {
 				final String[] command = new String[2];
 				command[0] = "ext-libs/countAntom";
-				//command[1] = "--doTseitin=no";
+				// command[1] = "--doTseitin=no";
 				command[command.length - 1] = getTempPath().toString();
 
 				printResult(execute(() -> {
