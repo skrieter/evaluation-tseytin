@@ -18,6 +18,7 @@ public class CoreDeadSPLDev extends Analysis.SPLDevAnalysis {
 			final long localTime = System.nanoTime();
 			LiteralList coreDead = new CoreDeadAnalysis().getResult(rep).orElseThrow();
 			final long timeNeeded = System.nanoTime() - localTime;
+			coreDead = coreDead.retainAll(LiteralList.getLiterals(rep.getVariables(), getActualFeatures(rep)));
 			List<String> coreDeadFeatures = Arrays.stream(coreDead.getPositiveLiterals().getVariables()
 				.getLiterals())
 				.mapToObj(index -> rep.getVariables().getName(index)).filter(Optional::isPresent).map(Optional::get)
@@ -28,7 +29,6 @@ public class CoreDeadSPLDev extends Analysis.SPLDevAnalysis {
 				.collect(Collectors.toList()));
 			coreDeadFeatures.sort(Collator.getInstance());
 			Files.write(getTempPath("coredeads"), String.join("\n", coreDeadFeatures).getBytes());
-			coreDead = coreDead.retainAll(LiteralList.getLiterals(rep.getVariables(), getActualFeatures(rep)));
 			return new Result<>(timeNeeded, md5(coreDeadFeatures), coreDead.size());
 		}));
 	}
