@@ -51,7 +51,8 @@ public abstract class Analysis implements Serializable {
 			"AtomicSetF" }));
 		analyses.add(new Pair<>(AtomicSetSPLDev.class, new String[] { "AtomicSetTimeS", "AtomicSetHashS",
 			"AtomicSetS" }));
-		analyses.add(new Pair<>(SharpSat.class, new String[] { "SharpSatTime", "SharpSat" }));
+		// analyses.add(new Pair<>(SharpSat.class, new String[] { "SharpSatTime",
+		// "SharpSat" }));
 		analyses.add(new Pair<>(CountAntom.class, new String[] { "CountAntomTime", "CountAntom" }));
 	}
 
@@ -151,11 +152,15 @@ public abstract class Analysis implements Serializable {
 		}
 	}
 
-	protected Path getTempPath() {
+	protected Path getTempPath(String suffix) {
 		return Paths.get(parameters.tempPath).resolve(
-			String.format("%s_%s_%d.dimacs",
+			String.format("%s_%s_%d.%s",
 				parameters.system.replaceAll("[./]", "_"),
-				parameters.transformation, parameters.iteration));
+				parameters.transformation, parameters.iteration, suffix));
+	}
+
+	protected Path getTempPath() {
+		return getTempPath("dimacs");
 	}
 
 	protected void printResult(Object o) {
@@ -175,7 +180,7 @@ public abstract class Analysis implements Serializable {
 		if (result != null) {
 			printResult(result.timeNeeded);
 			if (result.md5 != null)
-				printResult(result.md5);
+				printResult(result.md5.substring(0, 6));
 			printResult(result.result);
 		}
 	}
@@ -197,7 +202,6 @@ public abstract class Analysis implements Serializable {
 
 	protected String md5(List<String> list) {
 		try {
-			list.sort(Collator.getInstance());
 			MessageDigest m = MessageDigest.getInstance("MD5");
 			m.reset();
 			m.update(list.toString().getBytes());
