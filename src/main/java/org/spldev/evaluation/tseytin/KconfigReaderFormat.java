@@ -11,10 +11,22 @@ import org.prop4j.And;
 import org.prop4j.Node;
 import org.prop4j.NodeReader;
 
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class KconfigReaderFormat extends AFeatureModelFormat {
+	static class KconfigNodeReader extends NodeReader {
+		KconfigNodeReader() {
+			try {
+				Field field = NodeReader.class.getDeclaredField("symbols");
+				field.setAccessible(true);
+				field.set(this, new String[] { "==", "=>", "|", "&", "!" });
+			} catch (NoSuchFieldException | IllegalAccessException e) {
+				e.printStackTrace();
+			}
+		}
+	}
 
 	public static final String ID = PluginID.PLUGIN_ID + ".format.fm." + KconfigReaderFormat.class.getSimpleName();
 
@@ -22,12 +34,12 @@ public class KconfigReaderFormat extends AFeatureModelFormat {
 	public ProblemList read(IFeatureModel featureModel, CharSequence source) {
 		setFactory(featureModel);
 
-		final NodeReader nodeReader = new NodeReader();
-		nodeReader.activateShortSymbols2();
+		final NodeReader nodeReader = new KconfigNodeReader();
 		List<Node> constraints = source.toString().lines() //
 			.map(String::trim) //
 			.filter(l -> !l.isEmpty()) //
 			.filter(l -> !l.startsWith("#")) //
+			.filter(l -> !l.contains("=")) //
 			.map(l -> l.replaceAll("def\\((\\w+)\\)", "$1"))
 			.map(nodeReader::stringToNode) //
 			.filter(Objects::nonNull) // ignore non-Boolean constraints
