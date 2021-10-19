@@ -30,8 +30,6 @@ public class Transform extends Analysis {
 		public void run() {
 			Formula formula = readFormula(Paths.get(parameters.modelPath));
 			CNFTransformer transformer = new CNFTransformer();
-			transformer.setMaximumNumberOfClauses(0);
-			transformer.setMaximumLengthOfClauses(0);
 			transformer.setMaximumNumberOfLiterals(0);
 			processFormulaResult(executeTransformer(formula, transformer));
 		}
@@ -64,11 +62,7 @@ public class Transform extends Analysis {
 		@Override
 		public void run() {
 			Formula formula = readFormula(Paths.get(parameters.modelPath));
-			CNFTransformer transformer = new CNFTransformer();
-			transformer.setMaximumNumberOfClauses(Integer.MAX_VALUE);
-			transformer.setMaximumLengthOfClauses(Integer.MAX_VALUE);
-			transformer.setMaximumNumberOfLiterals(Integer.MAX_VALUE);
-			processFormulaResult(executeTransformer(formula, transformer));
+			processFormulaResult(executeTransformer(formula, new CNFTransformer()));
 		}
 	}
 }
