@@ -22,23 +22,20 @@
  */
 package org.spldev.evaluation.tseytin;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import org.spldev.evaluation.*;
 import org.spldev.evaluation.process.*;
-import org.spldev.evaluation.properties.*;
 import org.spldev.evaluation.util.*;
 import org.spldev.formula.expression.*;
 import org.spldev.formula.expression.atomic.literal.*;
 import org.spldev.formula.expression.io.*;
 import org.spldev.formula.expression.transform.*;
+import org.spldev.util.data.Pair;
 import org.spldev.util.io.csv.*;
 
 public class TseytinEvaluator extends Evaluator {
-	protected static final ListProperty<String> skipSharpSatProperty = new ListProperty<>("skipSharpSat",
-		Property.StringConverter);
-
 	protected CSVWriter writer, systemWriter;
 	protected ProcessRunner processRunner;
 
@@ -59,7 +56,7 @@ public class TseytinEvaluator extends Evaluator {
 		resultColumns.add("ID");
 		resultColumns.add("Iteration");
 		resultColumns.add("Transformation");
-		Analysis.resultColumns.forEach(analysisPair -> resultColumns.addAll(Arrays.asList(
+		Analysis.analyses.forEach(analysisPair -> resultColumns.addAll(Arrays.asList(
 			analysisPair.getValue())));
 		writer = addCSVWriter("evaluation.csv", resultColumns);
 		systemWriter = addCSVWriter("systems.csv", Arrays.asList("ID", "System", "Features", "Constraints"));
@@ -95,13 +92,12 @@ public class TseytinEvaluator extends Evaluator {
 				tabFormatter.setTabLevel(0);
 				logSystem();
 				tabFormatter.setTabLevel(1);
-				Analysis.transformations.forEach(transformationFunction -> {
-					Analysis transformations = transformationFunction.apply(parameters);
-					List<String> results = evaluateForParameters(parameters, transformations);
+				Arrays.stream(Analysis.transformations).forEach(transformation -> {
+					List<String> results = evaluateForParameters(parameters, transformation);
 					writeCSV(writer, writer -> {
 						writer.addValue(systemIndex);
 						writer.addValue(systemIteration);
-						writer.addValue(transformations.toString());
+						writer.addValue(transformation.toString());
 						results.forEach(writer::addValue);
 					});
 				});
@@ -112,23 +108,21 @@ public class TseytinEvaluator extends Evaluator {
 	private List<String> evaluateForParameters(Parameters parameters, Analysis transformation) {
 		tabFormatter.setTabLevel(2);
 		List<String> results = new ArrayList<>();
-		results.addAll(run(new Analysis.Transform(parameters), transformation));
-		results.addAll(run(new Analysis.SatFeatureIDE(parameters), transformation));
-		results.addAll(run(new Analysis.SatSPLDev(parameters), transformation));
-		results.addAll(run(new Analysis.CoreDeadFeatureIDE(parameters), transformation));
-		results.addAll(run(new Analysis.CoreDeadSPLDev(parameters), transformation));
-		results.addAll(run(new Analysis.AtomicSetFeatureIDE(parameters), transformation));
-		results.addAll(run(new Analysis.AtomicSetSPLDev(parameters), transformation));
-		if (skipSharpSatProperty.getValue().stream().noneMatch(s -> parameters.modelPath.startsWith(s)))
-			results.addAll(run(new Analysis.SharpSat(parameters), transformation));
-		else
-			results.addAll(Arrays.stream(new Analysis.SharpSat(null).getResultColumns())
-				.map(c -> "NA").collect(Collectors.toList()));
-		results.addAll(run(new Analysis.CountAntom(parameters), transformation)); // todo: automate addAll
+		Analysis.analyses.stream().map(Pair::getKey).forEach(analysisClass -> {
+			try {
+				Analysis analysis = (Analysis) analysisClass.getConstructor().newInstance();
+				results.addAll(run(parameters, analysis, transformation));
+			} catch (InstantiationException | IllegalAccessException | InvocationTargetException
+				| NoSuchMethodException e) {
+				e.printStackTrace();
+			}
+		});
 		return results;
 	}
 
-	private List<String> run(Analysis analysis, Analysis transformation) {
+	private List<String> run(Parameters parameters, Analysis analysis, Analysis transformation) {
+		analysis.setParameters(parameters);
+		transformation.setParameters(parameters);
 		Wrapper wrapper = new Wrapper(analysis);
 		wrapper.setTransformation(transformation);
 		tabFormatter.incTabLevel();
