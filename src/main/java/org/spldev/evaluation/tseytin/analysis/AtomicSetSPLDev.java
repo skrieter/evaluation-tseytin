@@ -4,6 +4,7 @@ import org.spldev.formula.ModelRepresentation;
 import org.spldev.formula.analysis.sat4j.AtomicSetAnalysis;
 import org.spldev.formula.clauses.LiteralList;
 
+import java.nio.file.Files;
 import java.text.Collator;
 import java.util.Arrays;
 import java.util.List;
@@ -27,8 +28,10 @@ public class AtomicSetSPLDev extends Analysis.SPLDevAnalysis {
 				.mapToObj(index -> rep.getVariables().getName(index)).filter(Optional::isPresent).map(Optional::get)
 				.collect(Collectors.toList())).collect(Collectors.toList());
 			atomicSetFeatures.forEach(atomicSet -> atomicSet.sort(Collator.getInstance()));
-			List<String> flatAtomicSetFeatures = atomicSetFeatures.stream().map(Object::toString).collect(Collectors
-				.toList());
+			List<String> flatAtomicSetFeatures = atomicSetFeatures.stream().map(Object::toString).sorted(Collator
+				.getInstance()).collect(Collectors
+					.toList());
+			Files.write(getTempPath("atomicsetss"), String.join("\n", flatAtomicSetFeatures).getBytes());
 			return new Result<>(timeNeeded, md5(flatAtomicSetFeatures), atomicSets.size());
 		}));
 	}

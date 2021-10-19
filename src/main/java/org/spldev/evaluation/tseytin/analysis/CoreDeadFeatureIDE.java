@@ -6,6 +6,8 @@ import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula;
 import de.ovgu.featureide.fm.core.base.IFeatureModel;
 import de.ovgu.featureide.fm.core.job.monitor.NullMonitor;
 
+import java.nio.file.Files;
+import java.text.Collator;
 import java.util.List;
 
 public class CoreDeadFeatureIDE extends Analysis.FeatureIDEAnalysis {
@@ -23,6 +25,8 @@ public class CoreDeadFeatureIDE extends Analysis.FeatureIDEAnalysis {
 				getActualFeatures(cnf), true, true));
 			List<String> coreDeadFeatures = cnf.getVariables()
 				.convertToString(coreDead, true, true, true);
+			coreDeadFeatures.sort(Collator.getInstance());
+			Files.write(getTempPath("coredeadf"), String.join("\n", coreDeadFeatures).getBytes());
 			return new Result<>(timeNeeded, md5(coreDeadFeatures), coreDead.size());
 		}));
 	}

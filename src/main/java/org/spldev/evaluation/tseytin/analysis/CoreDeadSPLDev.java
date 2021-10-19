@@ -4,6 +4,8 @@ import org.spldev.formula.ModelRepresentation;
 import org.spldev.formula.analysis.sat4j.CoreDeadAnalysis;
 import org.spldev.formula.clauses.LiteralList;
 
+import java.nio.file.Files;
+import java.text.Collator;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +26,8 @@ public class CoreDeadSPLDev extends Analysis.SPLDevAnalysis {
 				.mapToObj(index -> rep.getVariables().getName(index)).filter(Optional::isPresent).map(Optional::get)
 				.map(name -> "-" + name)
 				.collect(Collectors.toList()));
+			coreDeadFeatures.sort(Collator.getInstance());
+			Files.write(getTempPath("coredeads"), String.join("\n", coreDeadFeatures).getBytes());
 			coreDead = coreDead.retainAll(LiteralList.getLiterals(rep.getVariables(), getActualFeatures(rep)));
 			return new Result<>(timeNeeded, md5(coreDeadFeatures), coreDead.size());
 		}));

@@ -1,4 +1,7 @@
 axtls/release-1.0.0.kconfigreader.model
+automotive/1.featureide.xml
+busybox/1_34_0.kconfigreader.model
+embtoolkit/embtoolkit-1.8.0.kconfigreader.model
 ###
 automotive/1.featureide.xml
 automotive/2_1.featureide.xml

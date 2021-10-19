@@ -6,6 +6,7 @@ import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula;
 import de.ovgu.featureide.fm.core.base.IFeatureModel;
 import de.ovgu.featureide.fm.core.job.monitor.NullMonitor;
 
+import java.nio.file.Files;
 import java.text.Collator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,8 +32,10 @@ public class AtomicSetFeatureIDE extends Analysis.FeatureIDEAnalysis {
 				.convertToString(atomicSet.getVariables(), true, false, false))
 				.collect(Collectors.toList());
 			atomicSetFeatures.forEach(atomicSet -> atomicSet.sort(Collator.getInstance()));
-			List<String> flatAtomicSetFeatures = atomicSetFeatures.stream().map(Object::toString).collect(Collectors
-				.toList());
+			List<String> flatAtomicSetFeatures = atomicSetFeatures.stream().map(Object::toString).sorted(Collator
+				.getInstance()).collect(Collectors
+					.toList());
+			Files.write(getTempPath("atomicsetsf"), String.join("\n", flatAtomicSetFeatures).getBytes());
 			return new Result<>(timeNeeded, md5(flatAtomicSetFeatures), atomicSets.size());
 		}));
 	}
