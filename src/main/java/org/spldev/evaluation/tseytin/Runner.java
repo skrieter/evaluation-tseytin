@@ -31,7 +31,7 @@ import java.nio.file.Paths;
 import java.util.Objects;
 
 public class Runner {
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception {
 		if (args.length != 1) {
 			throw new RuntimeException("invalid usage");
 		}

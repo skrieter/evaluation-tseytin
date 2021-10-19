@@ -30,13 +30,15 @@ import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.text.Collator;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-abstract class Analysis implements Runnable, Serializable {
+abstract class Analysis implements Serializable {
 	private static final long serialVersionUID = 1L;
 	public static Analysis[] transformations = new Analysis[] {
 		new Analysis.TseytinZ3(),
@@ -50,10 +52,13 @@ abstract class Analysis implements Runnable, Serializable {
 		analyses.add(new Pair<>(Transform.class, new String[] { "TransformTime", "Variables", "Clauses" }));
 		analyses.add(new Pair<>(SatFeatureIDE.class, new String[] { "SatTimeF", "SatF" }));
 		analyses.add(new Pair<>(SatSPLDev.class, new String[] { "SatTimeS", "SatS" }));
-		analyses.add(new Pair<>(CoreDeadFeatureIDE.class, new String[] { "CoreDeadTimeF", "CoreDeadF" }));
-		analyses.add(new Pair<>(CoreDeadSPLDev.class, new String[] { "CoreDeadTimeS", "CoreDeadS" }));
-		analyses.add(new Pair<>(AtomicSetFeatureIDE.class, new String[] { "AtomicSetTimeF", "AtomicSetF" }));
-		analyses.add(new Pair<>(AtomicSetSPLDev.class, new String[] { "AtomicSetTimeS", "AtomicSetS" }));
+		analyses.add(new Pair<>(CoreDeadFeatureIDE.class, new String[] { "CoreDeadTimeF", "CoreDeadHashF",
+			"CoreDeadF" }));
+		analyses.add(new Pair<>(CoreDeadSPLDev.class, new String[] { "CoreDeadTimeS", "CoreDeadHashS", "CoreDeadS" }));
+		analyses.add(new Pair<>(AtomicSetFeatureIDE.class, new String[] { "AtomicSetTimeF", "AtomicSetHashF",
+			"AtomicSetF" }));
+		analyses.add(new Pair<>(AtomicSetSPLDev.class, new String[] { "AtomicSetTimeS", "AtomicSetHashS",
+			"AtomicSetS" }));
 		analyses.add(new Pair<>(SharpSat.class, new String[] { "SharpSatTime", "SharpSat" }));
 		analyses.add(new Pair<>(CountAntom.class, new String[] { "CountAntomTime", "CountAntom" }));
 	}
@@ -64,9 +69,15 @@ abstract class Analysis implements Runnable, Serializable {
 		this.parameters = parameters;
 	}
 
-	static class Result<T> extends Pair<Long, T> {
-		public Result(Long timeNeeded, T result) {
-			super(timeNeeded, result);
+	static class Result<T> {
+		Long timeNeeded;
+		String md5;
+		T result;
+
+		public Result(Long timeNeeded, String md5, T result) {
+			this.timeNeeded = timeNeeded;
+			this.md5 = md5;
+			this.result = result;
 		}
 	}
 
@@ -129,7 +140,7 @@ abstract class Analysis implements Runnable, Serializable {
 			final long localTime = System.nanoTime();
 			Formula transformedFormula = Executor.run(transformer, formula).orElse(Logger::logProblems);
 			final long timeNeeded = System.nanoTime() - localTime;
-			return new Result<>(timeNeeded, transformedFormula);
+			return new Result<>(timeNeeded, null, transformedFormula);
 		});
 	}
 
@@ -161,33 +172,57 @@ abstract class Analysis implements Runnable, Serializable {
 
 	protected void processFormulaResult(Result<Formula> result) {
 		if (result != null) {
-			printResult(result.getKey());
-			printResult(VariableMap.fromExpression(result.getValue()).size());
-			printResult(result.getValue().getChildren().size());
-			writeFormula(result.getValue(), getTempPath());
+			printResult(result.timeNeeded);
+			printResult(VariableMap.fromExpression(result.result).size());
+			printResult(result.result.getChildren().size());
+			writeFormula(result.result, getTempPath());
 		}
 	}
 
 	protected void printResult(Result<?> result) {
 		if (result != null) {
-			printResult(result.getKey());
-			printResult(result.getValue());
+			printResult(result.timeNeeded);
+			if (result.md5 != null)
+				printResult(result.md5);
+			printResult(result.result);
 		}
 	}
 
-	protected List<String> getNonTseytinFeatures(ModelRepresentation rep) {
-		return rep.getVariables().getNames().stream()
-			.filter(name -> name != null && !name.startsWith("__temp__"))
+	private List<String> getActualFeatures(Stream<String> stream) {
+		return stream.filter(name -> name != null && !name.startsWith("__temp__"))
+			.filter(name -> !name.startsWith("__Root__"))
 			.filter(name -> !name.startsWith("k!"))
 			.collect(Collectors.toList());
 	}
 
-	protected List<String> getNonTseytinFeatures(CNF cnf) {
-		return Arrays.stream(cnf.getVariables().getNames())
-			.filter(name -> name != null && !name.startsWith("__temp__"))
-			.filter(name -> !name.startsWith("k!"))
-			.collect(Collectors.toList());
+	protected List<String> getActualFeatures(ModelRepresentation rep) {
+		return getActualFeatures(rep.getVariables().getNames().stream());
 	}
+
+	protected List<String> getActualFeatures(CNF cnf) {
+		return getActualFeatures(Arrays.stream(cnf.getVariables().getNames()));
+	}
+
+	protected String md5(List<String> list) {
+		try {
+			list.sort(Collator.getInstance());
+			MessageDigest m = MessageDigest.getInstance("MD5");
+			m.reset();
+			m.update(list.toString().getBytes());
+			byte[] digest = m.digest();
+			BigInteger bigInt = new BigInteger(1, digest);
+			StringBuilder hash = new StringBuilder(bigInt.toString(16));
+			while (hash.length() < 32) {
+				hash.insert(0, "0");
+			}
+			return hash.toString();
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	abstract public void run() throws Exception;
 
 	abstract static class Transformation extends Analysis {
 		@Override
@@ -198,7 +233,7 @@ abstract class Analysis implements Runnable, Serializable {
 
 	abstract static class FeatureIDEAnalysis extends Analysis {
 		@Override
-		public void run() {
+		public void run() throws Exception {
 			if (Files.exists(getTempPath())) {
 				final IFeatureModel featureModel = FeatureModelManager.load(getTempPath());
 				if (featureModel != null) {
@@ -207,19 +242,61 @@ abstract class Analysis implements Runnable, Serializable {
 			}
 		}
 
-		abstract void run(IFeatureModel featureModel);
+		abstract void run(IFeatureModel featureModel) throws Exception;
 	}
 
 	abstract static class SPLDevAnalysis extends Analysis {
 		@Override
-		public void run() {
+		public void run() throws Exception {
 			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
 			if (rep.isPresent()) {
 				run(rep.get());
 			}
 		}
 
-		abstract void run(ModelRepresentation modelRepresentation);
+		abstract void run(ModelRepresentation modelRepresentation) throws Exception;
+	}
+
+	abstract static class ProcessAnalysis<T> extends Analysis {
+		protected boolean useTimeout;
+
+		@Override
+		public void run() {
+			final String[] command = getCommand();
+			printResult(execute(() -> {
+				final long localTime = System.nanoTime();
+				T result = getDefaultResult();
+				Process process = null;
+				ProcessBuilder processBuilder = new ProcessBuilder(command);
+				try {
+					process = processBuilder.start();
+					final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+					boolean success;
+					if (useTimeout)
+						success = process.waitFor(parameters.timeout, TimeUnit.MILLISECONDS);
+					else
+						success = process.waitFor() == 0;
+					if (success) {
+						process = null;
+						result = getResult(reader.lines());
+					}
+				} catch (IOException | InterruptedException e) {
+					e.printStackTrace();
+				} finally {
+					if (process != null) {
+						process.destroyForcibly();
+					}
+				}
+				final long timeNeeded = System.nanoTime() - localTime;
+				return new Result<>(timeNeeded, null, result);
+			}));
+		}
+
+		abstract String[] getCommand();
+
+		abstract T getDefaultResult();
+
+		abstract T getResult(Stream<String> lines);
 	}
 
 	public static class TseytinZ3 extends Transformation {
@@ -252,13 +329,13 @@ abstract class Analysis implements Runnable, Serializable {
 					final long localTime = System.nanoTime();
 					CNF cnf = new FeatureModelFormula(featureModel).getCNF();
 					final long timeNeeded = System.nanoTime() - localTime;
-					return new Analysis.Result<>(timeNeeded, cnf);
+					return new Analysis.Result<>(timeNeeded, null, cnf);
 				});
 				if (result != null) {
-					printResult(result.getKey());
-					printResult(result.getValue().getVariables().size());
-					printResult(result.getValue().getClauses().size());
-					de.ovgu.featureide.fm.core.io.manager.FileHandler.save(getTempPath(), result.getValue(),
+					printResult(result.timeNeeded);
+					printResult(result.result.getVariables().size());
+					printResult(result.result.getClauses().size());
+					de.ovgu.featureide.fm.core.io.manager.FileHandler.save(getTempPath(), result.result,
 						new DIMACSFormatCNF());
 				}
 			}
@@ -277,28 +354,23 @@ abstract class Analysis implements Runnable, Serializable {
 		}
 	}
 
-	public static class Transform extends Analysis { // todo: always call simplify for NF?
+	public static class Transform extends Analysis {
 		@Override
-		public void run() {
+		public void run() throws Exception {
 			parameters.transformation.run();
 		}
 	}
 
 	public static class SatFeatureIDE extends FeatureIDEAnalysis {
 		@Override
-		public void run(IFeatureModel featureModel) {
+		public void run(IFeatureModel featureModel) throws Exception {
 			CNF cnf = new FeatureModelFormula(featureModel).getCNF(); // todo: can this be done faster?
 			printResult(execute(() -> {
 				final long localTime = System.nanoTime();
-				Boolean sat = null;
-				try {
-					sat = new de.ovgu.featureide.fm.core.analysis.cnf.analysis.HasSolutionAnalysis(cnf)
-						.analyze(new NullMonitor<>());
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+				Boolean sat = new de.ovgu.featureide.fm.core.analysis.cnf.analysis.HasSolutionAnalysis(cnf)
+					.analyze(new NullMonitor<>());
 				final long timeNeeded = System.nanoTime() - localTime;
-				return new Result<>(timeNeeded, sat);
+				return new Result<>(timeNeeded, null, sat);
 			}));
 		}
 	}
@@ -306,12 +378,11 @@ abstract class Analysis implements Runnable, Serializable {
 	public static class SatSPLDev extends SPLDevAnalysis {
 		@Override
 		public void run(ModelRepresentation rep) {
-			final HasSolutionAnalysis hasSolutionAnalysis = new HasSolutionAnalysis();
 			printResult(execute(() -> {
 				final long localTime = System.nanoTime();
-				final Boolean sat = hasSolutionAnalysis.getResult(rep).orElseThrow();
+				final Boolean sat = new HasSolutionAnalysis().getResult(rep).orElseThrow();
 				final long timeNeeded = System.nanoTime() - localTime;
-				return new Result<>(timeNeeded, sat);
+				return new Result<>(timeNeeded, null, sat);
 			}));
 		}
 	}
@@ -319,24 +390,19 @@ abstract class Analysis implements Runnable, Serializable {
 	public static class CoreDeadFeatureIDE extends FeatureIDEAnalysis {
 		@Override
 		public void run(IFeatureModel featureModel) {
-			CNF cnf = new FeatureModelFormula(featureModel).getCNF(); // todo: can this be done faster?
+			CNF cnf = new FeatureModelFormula(featureModel).getCNF();
 			printResult(execute(() -> {
 				final long localTime = System.nanoTime();
-				LiteralSet coreDead = null;
-				try {
-					coreDead = new de.ovgu.featureide.fm.core.analysis.cnf.analysis.CoreDeadAnalysis(cnf)
-						.analyze(new NullMonitor<>());
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+				LiteralSet coreDead = new de.ovgu.featureide.fm.core.analysis.cnf.analysis.CoreDeadAnalysis(cnf)
+					.analyze(new NullMonitor<>());
 				final long timeNeeded = System.nanoTime() - localTime;
 				if (coreDead == null)
 					return null;
-				coreDead = coreDead.retainAll(cnf.getVariables().convertToLiterals(getNonTseytinFeatures(cnf),
-					true,
-					true));
-				// todo: recalculate variables
-				return new Result<>(timeNeeded, coreDead.size());
+				coreDead = coreDead.retainAll(cnf.getVariables().convertToLiterals(
+					getActualFeatures(cnf), true, true));
+				List<String> coreDeadFeatures = cnf.getVariables()
+					.convertToString(coreDead, true, true, true);
+				return new Result<>(timeNeeded, md5(coreDeadFeatures), coreDead.size());
 			}));
 		}
 	}
@@ -344,19 +410,20 @@ abstract class Analysis implements Runnable, Serializable {
 	public static class CoreDeadSPLDev extends SPLDevAnalysis {
 		@Override
 		public void run(ModelRepresentation rep) {
-			final CoreDeadAnalysis coreDeadAnalysis = new CoreDeadAnalysis();
-			// todo: we can calculate this for ALL features, or only the non-Tseytin
-			// features. But it should be comparable
-			// to the atomic sets! (is there any difference anyway?)
-			// coreDeadAnalysis.setVariables(LiteralList.getVariables(rep.getVariables(),
-			// getNotTseytinFeatures(rep)));
 			printResult(execute(() -> {
 				final long localTime = System.nanoTime();
-				LiteralList coreDead = coreDeadAnalysis.getResult(rep).orElseThrow();
+				LiteralList coreDead = new CoreDeadAnalysis().getResult(rep).orElseThrow();
 				final long timeNeeded = System.nanoTime() - localTime;
-				coreDead = coreDead.retainAll(LiteralList.getLiterals(rep.getVariables(),
-					getNonTseytinFeatures(rep)));
-				return new Result<>(timeNeeded, coreDead.size());
+				List<String> coreDeadFeatures = Arrays.stream(coreDead.getPositiveLiterals().getVariables()
+					.getLiterals())
+					.mapToObj(index -> rep.getVariables().getName(index)).filter(Optional::isPresent).map(Optional::get)
+					.collect(Collectors.toList());
+				coreDeadFeatures.addAll(Arrays.stream(coreDead.getNegativeLiterals().getVariables().getLiterals())
+					.mapToObj(index -> rep.getVariables().getName(index)).filter(Optional::isPresent).map(Optional::get)
+					.map(name -> "-" + name)
+					.collect(Collectors.toList()));
+				coreDead = coreDead.retainAll(LiteralList.getLiterals(rep.getVariables(), getActualFeatures(rep)));
+				return new Result<>(timeNeeded, md5(coreDeadFeatures), coreDead.size());
 			}));
 		}
 	}
@@ -364,26 +431,27 @@ abstract class Analysis implements Runnable, Serializable {
 	public static class AtomicSetFeatureIDE extends FeatureIDEAnalysis {
 		@Override
 		public void run(IFeatureModel featureModel) {
-			CNF cnf = new FeatureModelFormula(featureModel).getCNF(); // todo: can this be done faster?
+			CNF cnf = new FeatureModelFormula(featureModel).getCNF();
 			printResult(execute(() -> {
 				final long localTime = System.nanoTime();
-				List<LiteralSet> atomicSets = null;
-				try {
-					atomicSets = new de.ovgu.featureide.fm.core.analysis.cnf.analysis.AtomicSetAnalysis(cnf)
-						.analyze(new NullMonitor<>());
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+				List<LiteralSet> atomicSets = new de.ovgu.featureide.fm.core.analysis.cnf.analysis.AtomicSetAnalysis(
+					cnf).analyze(new NullMonitor<>());
 				final long timeNeeded = System.nanoTime() - localTime;
 				if (atomicSets == null)
 					return null;
-				LiteralSet nonTseytinFeatures = cnf.getVariables().convertToLiterals(getNonTseytinFeatures(cnf),
+				LiteralSet actualFeatures = cnf.getVariables().convertToLiterals(getActualFeatures(cnf),
 					true, true);
 				atomicSets = atomicSets.stream()
-					.map(atomicSet -> atomicSet.retainAll(nonTseytinFeatures))
+					.map(atomicSet -> atomicSet.retainAll(actualFeatures))
 					.filter(atomicSet -> !atomicSet.isEmpty())
 					.collect(Collectors.toList());
-				return new Result<>(timeNeeded, atomicSets.size());
+				List<List<String>> atomicSetFeatures = atomicSets.stream().map(atomicSet -> cnf.getVariables()
+					.convertToString(atomicSet.getVariables(), true, false, false))
+					.collect(Collectors.toList());
+				atomicSetFeatures.forEach(atomicSet -> atomicSet.sort(Collator.getInstance()));
+				List<String> flatAtomicSetFeatures = atomicSetFeatures.stream().map(Object::toString).collect(Collectors
+					.toList());
+				return new Result<>(timeNeeded, md5(flatAtomicSetFeatures), atomicSets.size());
 			}));
 		}
 	}
@@ -391,104 +459,81 @@ abstract class Analysis implements Runnable, Serializable {
 	public static class AtomicSetSPLDev extends SPLDevAnalysis {
 		@Override
 		public void run(ModelRepresentation rep) {
-			final AtomicSetAnalysis atomicSetAnalysis = new AtomicSetAnalysis();
-			// todo: maybe only calculate this for non-tseytin variables?
 			printResult(execute(() -> {
 				final long localTime = System.nanoTime();
-				List<LiteralList> atomicSets = atomicSetAnalysis.getResult(rep).orElseThrow();
+				List<LiteralList> atomicSets = new AtomicSetAnalysis().getResult(rep).orElseThrow();
 				final long timeNeeded = System.nanoTime() - localTime;
-				LiteralList nonTseytinFeatures = LiteralList.getLiterals(rep.getVariables(),
-					getNonTseytinFeatures(rep));
+				LiteralList actualFeatures = LiteralList.getLiterals(rep.getVariables(), getActualFeatures(rep));
 				atomicSets = atomicSets.stream()
-					.map(atomicSet -> atomicSet.retainAll(nonTseytinFeatures))
+					.map(atomicSet -> atomicSet.retainAll(actualFeatures))
 					.filter(atomicSet -> !atomicSet.isEmpty())
 					.collect(Collectors.toList());
-				return new Result<>(timeNeeded, atomicSets.size());
+				List<List<String>> atomicSetFeatures = atomicSets.stream().map(atomicSet -> Arrays.stream(atomicSet
+					.getVariables().getLiterals())
+					.mapToObj(index -> rep.getVariables().getName(index)).filter(Optional::isPresent).map(Optional::get)
+					.collect(Collectors.toList())).collect(Collectors.toList());
+				atomicSetFeatures.forEach(atomicSet -> atomicSet.sort(Collator.getInstance()));
+				List<String> flatAtomicSetFeatures = atomicSetFeatures.stream().map(Object::toString).collect(Collectors
+					.toList());
+				return new Result<>(timeNeeded, md5(flatAtomicSetFeatures), atomicSets.size());
 			}));
 		}
 	}
 
-	public static class SharpSat extends Analysis { // todo call sharp sat directly?
-		@Override
-		public void run() {
-			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
-			if (rep.isPresent()) {
-				final String[] command = new String[6];
-				command[0] = "ext-libs/sharpSAT";
-				command[1] = "-noCC";
-				command[2] = "-noIBCP";
-				command[3] = "-t";
-				command[4] = String.valueOf((int) (Math.ceil(parameters.timeout) / 1000.0));
-				command[command.length - 1] = getTempPath().toString();
+	public static class SharpSat extends ProcessAnalysis<BigInteger> {
+		public SharpSat() {
+			useTimeout = false;
+		}
 
-				printResult(execute(() -> {
-					final long localTime = System.nanoTime();
-					BigInteger sharpSat = BigInteger.valueOf(-1);
-					Process process = null;
-					ProcessBuilder processBuilder = new ProcessBuilder(command);
-					try {
-						process = processBuilder.start();
-						final BufferedReader reader = new BufferedReader(new InputStreamReader(process
-							.getInputStream()));
-						final int exitValue = process.waitFor();
-						if (exitValue == 0) {
-							process = null;
-							sharpSat = reader.lines().findFirst().map(BigInteger::new).orElse(BigInteger.ZERO);
-						}
-					} catch (IOException | InterruptedException e) {
-						e.printStackTrace();
-					} finally {
-						if (process != null) {
-							process.destroyForcibly();
-						}
-					}
-					final long timeNeeded = System.nanoTime() - localTime;
-					return new Result<>(timeNeeded, sharpSat);
-				}));
-			}
+		@Override
+		String[] getCommand() {
+			final String[] command = new String[6];
+			command[0] = "ext-libs/sharpSAT";
+			command[1] = "-noCC";
+			command[2] = "-noIBCP";
+			command[3] = "-t";
+			command[4] = String.valueOf((int) (Math.ceil(parameters.timeout) / 1000.0));
+			command[5] = getTempPath().toString();
+			return command;
+		}
+
+		@Override
+		BigInteger getDefaultResult() {
+			return BigInteger.valueOf(-1);
+		}
+
+		@Override
+		BigInteger getResult(Stream<String> lines) {
+			return lines.findFirst().map(BigInteger::new).orElse(BigInteger.valueOf(-1));
 		}
 	}
 
-	public static class CountAntom extends Analysis { // todo call sharp sat directly?
-		@Override
-		public void run() {
-			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
-			if (rep.isPresent()) {
-				final String[] command = new String[2];
-				command[0] = "ext-libs/countAntom";
-				// command[1] = "--doTseitin=no";
-				command[command.length - 1] = getTempPath().toString();
+	public static class CountAntom extends ProcessAnalysis<BigInteger> {
+		public CountAntom() {
+			useTimeout = true;
+		}
 
-				printResult(execute(() -> {
-					final long localTime = System.nanoTime();
-					BigInteger sharpSat = BigInteger.valueOf(-1);
-					Process process = null;
-					ProcessBuilder processBuilder = new ProcessBuilder(command);
-					try {
-						process = processBuilder.start();
-						final BufferedReader reader = new BufferedReader(new InputStreamReader(process
-							.getInputStream()));
-						final boolean success = process.waitFor(parameters.timeout, TimeUnit.MILLISECONDS);
-						if (success) {
-							process = null;
-							sharpSat = reader.lines()
-								.filter(line -> line.startsWith("c model count"))
-								.map(line -> line.split(":")[1].trim())
-								.map(BigInteger::new)
-								.findFirst()
-								.orElse(BigInteger.ZERO);
-						}
-					} catch (IOException | InterruptedException e) {
-						e.printStackTrace();
-					} finally {
-						if (process != null) {
-							process.destroyForcibly();
-						}
-					}
-					final long timeNeeded = System.nanoTime() - localTime;
-					return new Result<>(timeNeeded, sharpSat);
-				}));
-			}
+		@Override
+		String[] getCommand() {
+			final String[] command = new String[2];
+			command[0] = "ext-libs/countAntom";
+			// command[1] = "--doTseitin=no";
+			command[1] = getTempPath().toString();
+			return command;
+		}
+
+		@Override
+		BigInteger getDefaultResult() {
+			return BigInteger.valueOf(-1);
+		}
+
+		@Override
+		BigInteger getResult(Stream<String> lines) {
+			return lines.filter(line -> line.startsWith("c model count"))
+				.map(line -> line.split(":")[1].trim())
+				.map(BigInteger::new)
+				.findFirst()
+				.orElse(BigInteger.valueOf(-1));
 		}
 	}
 }
