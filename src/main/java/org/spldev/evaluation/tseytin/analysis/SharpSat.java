@@ -1,6 +1,5 @@
 package org.spldev.evaluation.tseytin.analysis;
 
-import java.math.BigInteger;
 import java.util.stream.Stream;
 
 public class SharpSat extends Analysis.ProcessAnalysis<String> {
