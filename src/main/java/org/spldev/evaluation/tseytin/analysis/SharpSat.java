@@ -3,7 +3,7 @@ package org.spldev.evaluation.tseytin.analysis;
 import java.math.BigInteger;
 import java.util.stream.Stream;
 
-public class SharpSat extends Analysis.ProcessAnalysis<BigInteger> {
+public class SharpSat extends Analysis.ProcessAnalysis<String> {
 	public SharpSat() {
 		useTimeout = false;
 	}
@@ -21,12 +21,12 @@ public class SharpSat extends Analysis.ProcessAnalysis<BigInteger> {
 	}
 
 	@Override
-	BigInteger getDefaultResult() {
-		return BigInteger.valueOf(-1);
+	String getDefaultResult() {
+		return "NA";
 	}
 
 	@Override
-	BigInteger getResult(Stream<String> lines) {
-		return lines.findFirst().map(BigInteger::new).orElse(BigInteger.valueOf(-1));
+	String getResult(Stream<String> lines) {
+		return lines.findFirst().orElse(getDefaultResult());
 	}
 }

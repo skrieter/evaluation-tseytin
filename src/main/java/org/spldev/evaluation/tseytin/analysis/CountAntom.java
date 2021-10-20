@@ -3,7 +3,7 @@ package org.spldev.evaluation.tseytin.analysis;
 import java.math.BigInteger;
 import java.util.stream.Stream;
 
-public class CountAntom extends Analysis.ProcessAnalysis<BigInteger> {
+public class CountAntom extends Analysis.ProcessAnalysis<String> {
 	public CountAntom() {
 		useTimeout = true;
 	}
@@ -18,16 +18,15 @@ public class CountAntom extends Analysis.ProcessAnalysis<BigInteger> {
 	}
 
 	@Override
-	BigInteger getDefaultResult() {
-		return BigInteger.valueOf(-1);
+	String getDefaultResult() {
+		return "NA";
 	}
 
 	@Override
-	BigInteger getResult(Stream<String> lines) {
+	String getResult(Stream<String> lines) {
 		return lines.filter(line -> line.startsWith("c model count"))
 			.map(line -> line.split(":")[1].trim())
-			.map(BigInteger::new)
 			.findFirst()
-			.orElse(BigInteger.valueOf(-1));
+			.orElse(getDefaultResult());
 	}
 }
