@@ -16,7 +16,9 @@ public class AtomicSetSPLDev extends Analysis.SPLDevAnalysis {
 	public void run(ModelRepresentation rep) {
 		printResult(execute(() -> {
 			final long localTime = System.nanoTime();
-			List<LiteralList> atomicSets = new AtomicSetAnalysis().getResult(rep).orElseThrow();
+			List<LiteralList> atomicSets = new AtomicSetAnalysis().getResult(rep).get();
+			if (atomicSets == null)
+				return null;
 			final long timeNeeded = System.nanoTime() - localTime;
 			LiteralList actualFeatures = LiteralList.getLiterals(rep.getVariables(), getActualFeatures(rep));
 			atomicSets = atomicSets.stream()

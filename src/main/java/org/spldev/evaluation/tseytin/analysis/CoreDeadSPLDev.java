@@ -16,7 +16,9 @@ public class CoreDeadSPLDev extends Analysis.SPLDevAnalysis {
 	public void run(ModelRepresentation rep) {
 		printResult(execute(() -> {
 			final long localTime = System.nanoTime();
-			LiteralList coreDead = new CoreDeadAnalysis().getResult(rep).orElseThrow();
+			LiteralList coreDead = new CoreDeadAnalysis().getResult(rep).get();
+			if (coreDead == null)
+				return null;
 			final long timeNeeded = System.nanoTime() - localTime;
 			coreDead = coreDead.retainAll(LiteralList.getLiterals(rep.getVariables(), getActualFeatures(rep)));
 			List<String> coreDeadFeatures = Arrays.stream(coreDead.getPositiveLiterals().getVariables()

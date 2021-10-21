@@ -4,13 +4,13 @@
 #embtoolkit/embtoolkit-1.8.0.kconfigreader.model
 automotive/1.featureide.xml
 automotive/2_1.featureide.xml
-automotive/2_1.knueppel2017.xml
-automotive/2_2.featureide.xml
-automotive/2_2.knueppel2017.xml
-automotive/2_3.featureide.xml
-automotive/2_3.knueppel2017.xml
+#automotive/2_1.knueppel2017.xml
+#automotive/2_2.featureide.xml
+#automotive/2_2.knueppel2017.xml
+#automotive/2_3.featureide.xml
+#automotive/2_3.knueppel2017.xml
 automotive/2_4.featureide.xml
-automotive/2_4.knueppel2017.xml
+#automotive/2_4.knueppel2017.xml
 axtls/release-1.0.0.kconfigreader.model
 #axtls/release-1.0.1.kconfigreader.model
 #axtls/release-1.0.2.kconfigreader.model
@@ -34,7 +34,7 @@ axtls/release-1.0.0.kconfigreader.model
 #axtls/release-1.5.4.kconfigreader.model
 axtls/release-2.0.0.kconfigreader.model
 axtls/unknown.featureide.xml
-axtls/unknown.knueppel2017.xml
+#axtls/unknown.knueppel2017.xml
 berkeleydb/unknown.featureide.xml
 buildroot/2009.02.kconfigreader.model
 #buildroot/2009.05.kconfigreader.model
@@ -48,7 +48,7 @@ buildroot/2009.02.kconfigreader.model
 #buildroot/2011.05.kconfigreader.model
 #buildroot/2011.08.kconfigreader.model
 #buildroot/2011.11.kconfigreader.model
-#buildroot/2012.02.kconfigreader.model
+buildroot/2012.02.kconfigreader.model
 #buildroot/2012.05.kconfigreader.model
 #buildroot/2012.08.kconfigreader.model
 #buildroot/2012.11.kconfigreader.model
@@ -60,7 +60,7 @@ buildroot/2009.02.kconfigreader.model
 #buildroot/2014.05.kconfigreader.model
 #buildroot/2014.08.kconfigreader.model
 #buildroot/2014.11.kconfigreader.model
-#buildroot/2015.02.kconfigreader.model
+buildroot/2015.02.kconfigreader.model
 #buildroot/2015.05.kconfigreader.model
 #buildroot/2015.08.kconfigreader.model
 #buildroot/2015.11.kconfigreader.model
@@ -72,7 +72,7 @@ buildroot/2009.02.kconfigreader.model
 #buildroot/2017.05.kconfigreader.model
 #buildroot/2017.08.kconfigreader.model
 #buildroot/2017.11.kconfigreader.model
-#buildroot/2018.02.kconfigreader.model
+buildroot/2018.02.kconfigreader.model
 #buildroot/2018.05.kconfigreader.model
 #buildroot/2018.08.kconfigreader.model
 #buildroot/2018.11.kconfigreader.model
@@ -87,9 +87,9 @@ buildroot/2009.02.kconfigreader.model
 #buildroot/2021.02.kconfigreader.model
 #buildroot/2021.05.kconfigreader.model
 buildroot/2021.08.kconfigreader.model
-busybox/1.18.0.featureide.xml
+#busybox/1.18.0.featureide.xml
 #busybox/1.18.0.knueppel2017.xml
-#busybox/1_3_0.kconfigreader.model
+busybox/1_3_0.kconfigreader.model
 #busybox/1_3_1.kconfigreader.model
 #busybox/1_3_2.kconfigreader.model
 #busybox/1_4_0.kconfigreader.model
@@ -112,7 +112,7 @@ busybox/1.18.0.featureide.xml
 #busybox/1_9_0.kconfigreader.model
 #busybox/1_9_1.kconfigreader.model
 #busybox/1_9_2.kconfigreader.model
-#busybox/1_10_0.kconfigreader.model
+busybox/1_10_0.kconfigreader.model
 #busybox/1_10_3.kconfigreader.model
 #busybox/1_11_0.kconfigreader.model
 #busybox/1_11_1.kconfigreader.model
@@ -156,7 +156,7 @@ busybox/1.18.0.featureide.xml
 #busybox/1_19_2.kconfigreader.model
 #busybox/1_19_3.kconfigreader.model
 #busybox/1_19_4.kconfigreader.model
-#busybox/1_20_0.kconfigreader.model
+busybox/1_20_0.kconfigreader.model
 #busybox/1_20_1.kconfigreader.model
 #busybox/1_20_2.kconfigreader.model
 #busybox/1_21_0.kconfigreader.model
@@ -186,7 +186,7 @@ busybox/1.18.0.featureide.xml
 #busybox/1_29_1.kconfigreader.model
 #busybox/1_29_2.kconfigreader.model
 #busybox/1_29_3.kconfigreader.model
-#busybox/1_30_0.kconfigreader.model
+busybox/1_30_0.kconfigreader.model
 #busybox/1_30_1.kconfigreader.model
 #busybox/1_31_0.kconfigreader.model
 #busybox/1_31_1.kconfigreader.model
@@ -196,7 +196,7 @@ busybox/1.18.0.featureide.xml
 #busybox/1_33_1.kconfigreader.model
 busybox/1_34_0.kconfigreader.model
 embtoolkit/embtoolkit-0.1.0.kconfigreader.model
-#embtoolkit/embtoolkit-1.0.0.kconfigreader.model
+embtoolkit/embtoolkit-1.0.0.kconfigreader.model
 #embtoolkit/embtoolkit-1.1.0.kconfigreader.model
 #embtoolkit/embtoolkit-1.2.0.kconfigreader.model
 #embtoolkit/embtoolkit-1.3.0.kconfigreader.model
@@ -206,13 +206,13 @@ embtoolkit/embtoolkit-0.1.0.kconfigreader.model
 #embtoolkit/embtoolkit-1.7.0.kconfigreader.model
 embtoolkit/embtoolkit-1.8.0.kconfigreader.model
 embtoolkit/unknown.featureide.xml
-embtoolkit/unknown.knueppel2017.xml
+#embtoolkit/unknown.knueppel2017.xml
 fiasco/d393c79a5f67bb5466fa69b061ede0f81b6398db.kconfigreader.model
 financialservices/1.featureide.xml
 freetz-ng/88b972a6283bfd65ae1bbf559e53caf7bb661ae3.kconfigreader.model
 linux/2.6.33.3.featureide.xml
-linux/2.6.33.3.knueppel2017.xml
-linux/unknown.featureide.xml
+#linux/2.6.33.3.knueppel2017.xml
+#linux/unknown.featureide.xml
 linux/v2.6.12.kconfigreader.model
 #linux/v2.6.13.kconfigreader.model
 #linux/v2.6.14.kconfigreader.model
@@ -241,7 +241,7 @@ linux/v2.6.12.kconfigreader.model
 #linux/v2.6.37.kconfigreader.model
 #linux/v2.6.38.kconfigreader.model
 #linux/v2.6.39.kconfigreader.model
-#linux/v3.0.kconfigreader.model
+linux/v3.0.kconfigreader.model
 #linux/v3.1.kconfigreader.model
 #linux/v3.2.kconfigreader.model
 #linux/v3.3.kconfigreader.model
@@ -261,7 +261,7 @@ linux/v2.6.12.kconfigreader.model
 #linux/v3.17.kconfigreader.model
 #linux/v3.18.kconfigreader.model
 #linux/v3.19.kconfigreader.model
-#linux/v4.0.kconfigreader.model
+linux/v4.0.kconfigreader.model
 #linux/v4.1.kconfigreader.model
 #linux/v4.2.kconfigreader.model
 #linux/v4.3.kconfigreader.model
@@ -280,7 +280,7 @@ linux/v2.6.12.kconfigreader.model
 #linux/v4.16.kconfigreader.model
 #linux/v4.17.kconfigreader.model
 linux/v4.18.kconfigreader.model
-soletta/0af59c07c9afbea46dd44801f35ca32858f89bb1.pett2021.xml
+#soletta/0af59c07c9afbea46dd44801f35ca32858f89bb1.pett2021.xml
 #soletta/0b0d12fb99fd0c01393dbfe9b1f1013844926ebb.pett2021.xml
 #soletta/00b4e6a14a405ea18ec2cc9382d86226fb1cd557.pett2021.xml
 #soletta/0b47f127653659dddfb78c26ccf1be80d4b7bc89.pett2021.xml
@@ -489,9 +489,9 @@ soletta/0af59c07c9afbea46dd44801f35ca32858f89bb1.pett2021.xml
 #soletta/fa7f6e4c8099e18ec7381605e392a6c8cdf24cf2.pett2021.xml
 #soletta/fb5d1ffa0fe4b33f70688911aab8bfa9d5a15896.pett2021.xml
 #soletta/feff182a82128aec5091648efccc973d6ab8287b.pett2021.xml
-soletta/ff7e27b3dc8c9514d433dc5d7ae76944bf835ab8.pett2021.xml
-uclibc-ng/unknown.featureide.xml
-uclibc-ng/unknown.knueppel2017.xml
+#soletta/ff7e27b3dc8c9514d433dc5d7ae76944bf835ab8.pett2021.xml
+#uclibc-ng/unknown.featureide.xml
+#uclibc-ng/unknown.knueppel2017.xml
 uclibc-ng/v1.0.0.kconfigreader.model
 #uclibc-ng/v1.0.2.kconfigreader.model
 #uclibc-ng/v1.0.3.kconfigreader.model
@@ -501,7 +501,7 @@ uclibc-ng/v1.0.0.kconfigreader.model
 #uclibc-ng/v1.0.7.kconfigreader.model
 #uclibc-ng/v1.0.8.kconfigreader.model
 #uclibc-ng/v1.0.9.kconfigreader.model
-#uclibc-ng/v1.0.10.kconfigreader.model
+uclibc-ng/v1.0.10.kconfigreader.model
 #uclibc-ng/v1.0.11.kconfigreader.model
 #uclibc-ng/v1.0.12.kconfigreader.model
 #uclibc-ng/v1.0.13.kconfigreader.model
@@ -511,7 +511,7 @@ uclibc-ng/v1.0.0.kconfigreader.model
 #uclibc-ng/v1.0.17.kconfigreader.model
 #uclibc-ng/v1.0.18.kconfigreader.model
 #uclibc-ng/v1.0.19.kconfigreader.model
-#uclibc-ng/v1.0.20.kconfigreader.model
+uclibc-ng/v1.0.20.kconfigreader.model
 #uclibc-ng/v1.0.21.kconfigreader.model
 #uclibc-ng/v1.0.22.kconfigreader.model
 #uclibc-ng/v1.0.23.kconfigreader.model
@@ -521,7 +521,7 @@ uclibc-ng/v1.0.0.kconfigreader.model
 #uclibc-ng/v1.0.27.kconfigreader.model
 #uclibc-ng/v1.0.28.kconfigreader.model
 #uclibc-ng/v1.0.29.kconfigreader.model
-#uclibc-ng/v1.0.30.kconfigreader.model
+uclibc-ng/v1.0.30.kconfigreader.model
 #uclibc-ng/v1.0.31.kconfigreader.model
 #uclibc-ng/v1.0.32.kconfigreader.model
 #uclibc-ng/v1.0.33.kconfigreader.model
@@ -530,6 +530,6 @@ uclibc-ng/v1.0.0.kconfigreader.model
 #uclibc-ng/v1.0.36.kconfigreader.model
 uclibc-ng/v1.0.37.kconfigreader.model
 uclinux-base/unknown.featureide.xml
-uclinux-base/unknown.knueppel2017.xml
+#uclinux-base/unknown.knueppel2017.xml
 uclinux-distribution/unknown.featureide.xml
-uclinux-distribution/unknown.knueppel2017.xml
+#uclinux-distribution/unknown.knueppel2017.xml

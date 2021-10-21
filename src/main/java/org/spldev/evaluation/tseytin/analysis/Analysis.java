@@ -12,6 +12,7 @@ import org.spldev.formula.expression.atomic.literal.VariableMap;
 import org.spldev.formula.expression.io.DIMACSFormat;
 import org.spldev.formula.expression.io.FormulaFormatManager;
 import org.spldev.formula.expression.transform.Transformer;
+import org.spldev.formula.solver.RuntimeTimeoutException;
 import org.spldev.util.data.Pair;
 import org.spldev.util.io.FileHandler;
 import org.spldev.util.job.Executor;
@@ -19,13 +20,13 @@ import org.spldev.util.logging.Logger;
 
 import java.io.*;
 import java.math.BigInteger;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.text.Collator;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -116,10 +117,7 @@ public abstract class Analysis implements Serializable {
 		final Future<T> future = executor.submit(method);
 		try {
 			return future.get(parameters.timeout, TimeUnit.MILLISECONDS);
-		} catch (final TimeoutException e) {
-			System.exit(0);
-		} catch (ExecutionException | InterruptedException e) {
-			e.printStackTrace();
+		} catch (TimeoutException | ExecutionException | InterruptedException | RuntimeTimeoutException e) {
 			System.exit(0);
 		} finally {
 			executor.shutdownNow();
@@ -160,6 +158,17 @@ public abstract class Analysis implements Serializable {
 
 	protected Path getTempPath() {
 		return getTempPath("dimacs");
+	}
+
+	protected boolean fileExists(Path path) {
+		try {
+			BufferedReader br = new BufferedReader(new FileReader(path.toFile()));
+			if (br.readLine() == null)
+				return false;
+		} catch (IOException e) {
+			return false;
+		}
+		return true;
 	}
 
 	protected void printResult(Object o) {
@@ -229,7 +238,7 @@ public abstract class Analysis implements Serializable {
 	abstract static class FeatureIDEAnalysis extends Analysis {
 		@Override
 		public void run() throws Exception {
-			if (Files.exists(getTempPath())) {
+			if (fileExists(getTempPath())) {
 				final IFeatureModel featureModel = FeatureModelManager.load(getTempPath());
 				if (featureModel != null) {
 					run(featureModel);
@@ -243,9 +252,11 @@ public abstract class Analysis implements Serializable {
 	abstract static class SPLDevAnalysis extends Analysis {
 		@Override
 		public void run() throws Exception {
-			final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
-			if (rep.isPresent()) {
-				run(rep.get());
+			if (fileExists(getTempPath())) {
+				final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
+				if (rep.isPresent()) {
+					run(rep.get());
+				}
 			}
 		}
 
