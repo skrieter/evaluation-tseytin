@@ -1,5 +1,7 @@
 package org.spldev.evaluation.tseytin.analysis;
 
+import org.spldev.util.data.Pair;
+
 import java.util.stream.Stream;
 
 public class SharpSat extends Analysis.ProcessAnalysis<String> {
@@ -20,12 +22,13 @@ public class SharpSat extends Analysis.ProcessAnalysis<String> {
 	}
 
 	@Override
-	String getDefaultResult() {
-		return "NA";
+	Pair<String, String> getDefaultResult() {
+		return new Pair<>("NA", md5("NA"));
 	}
 
 	@Override
-	String getResult(Stream<String> lines) {
-		return lines.findFirst().orElse(getDefaultResult());
+	Pair<String, String> getResult(Stream<String> lines) {
+		String count = lines.findFirst().orElse("NA");
+		return new Pair<>(count, md5(count));
 	}
 }

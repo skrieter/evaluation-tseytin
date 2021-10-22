@@ -1,5 +1,7 @@
 package org.spldev.evaluation.tseytin.analysis;
 
+import org.spldev.util.data.Pair;
+
 import java.util.stream.Stream;
 
 public class CountAntom extends Analysis.ProcessAnalysis<String> {
@@ -17,15 +19,16 @@ public class CountAntom extends Analysis.ProcessAnalysis<String> {
 	}
 
 	@Override
-	String getDefaultResult() {
-		return "NA";
+	Pair<String, String> getDefaultResult() {
+		return new Pair<>("NA", md5("NA"));
 	}
 
 	@Override
-	String getResult(Stream<String> lines) {
-		return lines.filter(line -> line.startsWith("c model count"))
+	Pair<String, String> getResult(Stream<String> lines) {
+		String count = lines.filter(line -> line.startsWith("c model count"))
 			.map(line -> line.split(":")[1].trim())
 			.findFirst()
-			.orElse(getDefaultResult());
+			.orElse("NA");
+		return new Pair<>(count, md5(count));
 	}
 }

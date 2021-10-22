@@ -24,9 +24,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -226,6 +224,10 @@ public abstract class Analysis implements Serializable {
 		return null;
 	}
 
+	protected String md5(String str) {
+		return md5(Collections.singletonList(str));
+	}
+
 	abstract public void run() throws Exception;
 
 	abstract static class Transformation extends Analysis {
@@ -271,7 +273,7 @@ public abstract class Analysis implements Serializable {
 			final String[] command = getCommand();
 			printResult(execute(() -> {
 				final long localTime = System.nanoTime();
-				T result = getDefaultResult();
+				Pair<T, String> result = getDefaultResult();
 				Process process = null;
 				ProcessBuilder processBuilder = new ProcessBuilder(command);
 				try {
@@ -294,14 +296,14 @@ public abstract class Analysis implements Serializable {
 					}
 				}
 				final long timeNeeded = System.nanoTime() - localTime;
-				return new Result<>(timeNeeded, null, result);
+				return new Result<>(timeNeeded, result.getValue(), result.getKey());
 			}));
 		}
 
 		abstract String[] getCommand();
 
-		abstract T getDefaultResult();
+		abstract Pair<T, String> getDefaultResult();
 
-		abstract T getResult(Stream<String> lines);
+		abstract Pair<T, String> getResult(Stream<String> lines);
 	}
 }
