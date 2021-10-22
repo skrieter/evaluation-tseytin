@@ -10,6 +10,7 @@ import de.ovgu.featureide.fm.core.job.monitor.NullMonitor;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.text.Collator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,9 +28,8 @@ public class AtomicSetFeatureIDE extends Analysis.FeatureIDEAnalysis {
 			.map(atomicSet -> atomicSet.retainAll(actualFeatures))
 			.filter(atomicSet -> !atomicSet.isEmpty())
 			.collect(Collectors.toList());
-		List<List<String>> atomicSetFeatures = atomicSets.stream().map(atomicSet -> cnf.getVariables()
-			.convertToString(atomicSet.getVariables(), true, false, false).stream()
-			.map(feature -> feature.replace("|", "")).collect(Collectors.toList()))
+		List<List<String>> atomicSetFeatures = atomicSets.stream().map(atomicSet -> new ArrayList<>(cnf.getVariables()
+			.convertToString(atomicSet.getVariables(), true, false, false)))
 			.collect(Collectors.toList());
 		atomicSetFeatures.forEach(atomicSet -> atomicSet.sort(Collator.getInstance()));
 		List<String> flatAtomicSetFeatures = atomicSetFeatures.stream().map(Object::toString).sorted(Collator

@@ -26,8 +26,7 @@ public class CoreDeadFeatureIDE extends Analysis.FeatureIDEAnalysis {
 		coreDead = coreDead.retainAll(cnf.getVariables().convertToLiterals(
 			getActualFeatures(cnf), true, true));
 		List<String> coreDeadFeatures = cnf.getVariables()
-			.convertToString(coreDead, true, true, true)
-			.stream().map(feature -> feature.replace("|", "")).collect(Collectors.toList());
+			.convertToString(coreDead, true, true, true);
 		coreDeadFeatures.sort(Collator.getInstance());
 		Files.write(getTempPath("coredeadf"), String.join("\n", coreDeadFeatures).getBytes());
 		printResult(new Result<>(result.timeNeeded, coreDead.size(), md5(coreDeadFeatures)));

@@ -28,8 +28,6 @@ public class CoreDeadSPLDev extends Analysis.SPLDevAnalysis {
 			.mapToObj(index -> rep.getVariables().getName(index)).filter(Optional::isPresent).map(Optional::get)
 			.map(name -> "-" + name)
 			.collect(Collectors.toList()));
-		coreDeadFeatures = coreDeadFeatures.stream().map(feature -> feature.replace("|", "")).collect(Collectors
-			.toList());
 		coreDeadFeatures.sort(Collator.getInstance());
 		Files.write(getTempPath("coredeads"), String.join("\n", coreDeadFeatures).getBytes());
 		printResult(new Result<>(result.timeNeeded, coreDead.size(), md5(coreDeadFeatures)));

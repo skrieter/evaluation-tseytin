@@ -200,6 +200,7 @@ public abstract class Analysis implements Serializable {
 		return stream.filter(name -> name != null && !name.startsWith("__temp__"))
 			.filter(name -> !name.startsWith("__Root__"))
 			.filter(name -> !name.startsWith("k!"))
+			.filter(name -> !name.startsWith("|"))
 			.collect(Collectors.toList());
 	}
 

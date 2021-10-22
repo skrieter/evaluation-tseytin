@@ -27,7 +27,6 @@ public class AtomicSetSPLDev extends Analysis.SPLDevAnalysis {
 		List<List<String>> atomicSetFeatures = atomicSets.stream().map(atomicSet -> Arrays.stream(atomicSet
 			.getVariables().getLiterals())
 			.mapToObj(index -> rep.getVariables().getName(index)).filter(Optional::isPresent).map(Optional::get)
-			.map(feature -> feature.replace("|", ""))
 			.collect(Collectors.toList())).collect(Collectors.toList());
 		atomicSetFeatures.forEach(atomicSet -> atomicSet.sort(Collator.getInstance()));
 		List<String> flatAtomicSetFeatures = atomicSetFeatures.stream().map(Object::toString).sorted(Collator
