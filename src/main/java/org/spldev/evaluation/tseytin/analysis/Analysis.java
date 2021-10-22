@@ -50,8 +50,8 @@ public abstract class Analysis implements Serializable {
 			"AtomicSetF" }));
 		analyses.add(new Pair<>(AtomicSetSPLDev.class, new String[] { "AtomicSetTimeS", "AtomicSetHashS",
 			"AtomicSetS" }));
-		analyses.add(new Pair<>(SharpSat.class, new String[] { "SharpSatTime", "SharpSat" }));
-		analyses.add(new Pair<>(CountAntom.class, new String[] { "CountAntomTime", "CountAntom" }));
+//		analyses.add(new Pair<>(SharpSatSharpSat.class, new String[] { "SharpSatTimeS", "SharpSatHashS", "SharpSatS" }));
+//		analyses.add(new Pair<>(SharpSatCountAntom.class, new String[] { "SharpSatTimeC", "SharpSatHashC", "SharpSatC" }));
 	}
 
 	public Parameters parameters;
@@ -62,13 +62,13 @@ public abstract class Analysis implements Serializable {
 
 	static class Result<T> {
 		Long timeNeeded;
+		T payload;
 		String md5;
-		T result;
 
-		public Result(Long timeNeeded, String md5, T result) {
+		public Result(Long timeNeeded, T payload, String md5) {
 			this.timeNeeded = timeNeeded;
+			this.payload = payload;
 			this.md5 = md5;
-			this.result = result;
 		}
 	}
 
@@ -110,9 +110,19 @@ public abstract class Analysis implements Serializable {
 			.findFirst().orElseThrow().getValue();
 	}
 
-	protected <T> T execute(Callable<T> method) {
+	protected <T> Result<T> execute(Callable<T> method) {
 		final ExecutorService executor = Executors.newSingleThreadExecutor();
-		final Future<T> future = executor.submit(method);
+		final Future<Result<T>> future = executor.submit(() -> {
+			T payload = null;
+			final long localTime = System.nanoTime();
+			try {
+				payload = method.call();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			final long timeNeeded = System.nanoTime() - localTime;
+			return payload == null ? null : new Result<>(timeNeeded, payload, null);
+		});
 		try {
 			return future.get(parameters.timeout, TimeUnit.MILLISECONDS);
 		} catch (TimeoutException | ExecutionException | InterruptedException | RuntimeTimeoutException e) {
@@ -124,12 +134,7 @@ public abstract class Analysis implements Serializable {
 	}
 
 	protected Result<Formula> executeTransformer(Formula formula, Transformer transformer) {
-		return execute(() -> {
-			final long localTime = System.nanoTime();
-			Formula transformedFormula = Executor.run(transformer, formula).orElse(Logger::logProblems);
-			final long timeNeeded = System.nanoTime() - localTime;
-			return new Result<>(timeNeeded, null, transformedFormula);
-		});
+		return execute(() -> Executor.run(transformer, formula).orElse(Logger::logProblems));
 	}
 
 	protected Formula readFormula(Path path) {
@@ -176,9 +181,9 @@ public abstract class Analysis implements Serializable {
 	protected void processFormulaResult(Result<Formula> result) {
 		if (result != null) {
 			printResult(result.timeNeeded);
-			printResult(VariableMap.fromExpression(result.result).size());
-			printResult(result.result.getChildren().size());
-			writeFormula(result.result, getTempPath());
+			printResult(VariableMap.fromExpression(result.payload).size());
+			printResult(result.payload.getChildren().size());
+			writeFormula(result.payload, getTempPath());
 		}
 	}
 
@@ -187,7 +192,7 @@ public abstract class Analysis implements Serializable {
 			printResult(result.timeNeeded);
 			if (result.md5 != null)
 				printResult(result.md5.substring(0, 6));
-			printResult(result.result);
+			printResult(result.payload);
 		}
 	}
 
@@ -271,9 +276,8 @@ public abstract class Analysis implements Serializable {
 		@Override
 		public void run() {
 			final String[] command = getCommand();
-			printResult(execute(() -> {
-				final long localTime = System.nanoTime();
-				Pair<T, String> result = getDefaultResult();
+			Result<T> result = execute(() -> {
+				T payload = getDefaultResult();
 				Process process = null;
 				ProcessBuilder processBuilder = new ProcessBuilder(command);
 				try {
@@ -286,7 +290,7 @@ public abstract class Analysis implements Serializable {
 						success = process.waitFor() == 0;
 					if (success) {
 						process = null;
-						result = getResult(reader.lines());
+						payload = getPayload(reader.lines());
 					}
 				} catch (IOException | InterruptedException e) {
 					e.printStackTrace();
@@ -295,15 +299,20 @@ public abstract class Analysis implements Serializable {
 						process.destroyForcibly();
 					}
 				}
-				final long timeNeeded = System.nanoTime() - localTime;
-				return new Result<>(timeNeeded, result.getValue(), result.getKey());
-			}));
+				return payload;
+			});
+			if (result == null)
+				return;
+			result.md5 = getMd5(result.payload);
+			printResult(result);
 		}
 
 		abstract String[] getCommand();
 
-		abstract Pair<T, String> getDefaultResult();
+		abstract T getDefaultResult();
 
-		abstract Pair<T, String> getResult(Stream<String> lines);
+		abstract T getPayload(Stream<String> lines);
+
+		abstract String getMd5(T payload);
 	}
 }
