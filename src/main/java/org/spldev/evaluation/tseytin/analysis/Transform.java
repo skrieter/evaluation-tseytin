@@ -41,17 +41,12 @@ public class Transform extends Analysis {
 			final IFeatureModel featureModel = FeatureModelManager
 				.load(Paths.get(parameters.rootPath).resolve(parameters.modelPath));
 			if (featureModel != null) {
-				Result<CNF> result = execute(() -> {
-					final long localTime = System.nanoTime();
-					CNF cnf = new FeatureModelFormula(featureModel).getCNF();
-					final long timeNeeded = System.nanoTime() - localTime;
-					return new Result<>(timeNeeded, null, cnf);
-				});
+				Result<CNF> result = execute(() -> new FeatureModelFormula(featureModel).getCNF());
 				if (result != null) {
 					printResult(result.timeNeeded);
-					printResult(result.result.getVariables().size());
-					printResult(result.result.getClauses().size());
-					de.ovgu.featureide.fm.core.io.manager.FileHandler.save(getTempPath(), result.result,
+					printResult(result.payload.getVariables().size());
+					printResult(result.payload.getClauses().size());
+					de.ovgu.featureide.fm.core.io.manager.FileHandler.save(getTempPath(), result.payload,
 						new DIMACSFormatCNF());
 				}
 			}

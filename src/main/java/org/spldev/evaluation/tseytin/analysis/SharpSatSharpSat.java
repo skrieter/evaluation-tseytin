@@ -1,11 +1,9 @@
 package org.spldev.evaluation.tseytin.analysis;
 
-import org.spldev.util.data.Pair;
-
 import java.util.stream.Stream;
 
-public class SharpSat extends Analysis.ProcessAnalysis<String> {
-	public SharpSat() {
+public class SharpSatSharpSat extends Analysis.ProcessAnalysis<String> {
+	public SharpSatSharpSat() {
 		useTimeout = false;
 	}
 
@@ -22,13 +20,17 @@ public class SharpSat extends Analysis.ProcessAnalysis<String> {
 	}
 
 	@Override
-	Pair<String, String> getDefaultResult() {
-		return new Pair<>("NA", md5("NA"));
+	String getDefaultResult() {
+		return "NA";
 	}
 
 	@Override
-	Pair<String, String> getResult(Stream<String> lines) {
-		String count = lines.findFirst().orElse("NA");
-		return new Pair<>(count, md5(count));
+	String getPayload(Stream<String> lines) {
+		return lines.findFirst().orElse("NA");
+	}
+
+	@Override
+	String getMd5(String payload) {
+		return md5(payload);
 	}
 }
