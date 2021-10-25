@@ -50,8 +50,11 @@ public abstract class Analysis implements Serializable {
 			"AtomicSetF" }));
 		analyses.add(new Pair<>(AtomicSetSPLDev.class, new String[] { "AtomicSetTimeS", "AtomicSetHashS",
 			"AtomicSetS" }));
-//		analyses.add(new Pair<>(SharpSatSharpSat.class, new String[] { "SharpSatTimeS", "SharpSatHashS", "SharpSatS" }));
-//		analyses.add(new Pair<>(SharpSatCountAntom.class, new String[] { "SharpSatTimeC", "SharpSatHashC", "SharpSatC" }));
+		analyses.add(new Pair<>(SharpSatSharpSat.class, new String[] { "SharpSatTimeS", "SharpSatHashS",
+			"SharpSatS" }));
+		// analyses.add(new Pair<>(SharpSatCountAntom.class, new String[] {
+		// "SharpSatTimeC", "SharpSatHashC",
+		// "SharpSatC" }));
 	}
 
 	public Parameters parameters;
