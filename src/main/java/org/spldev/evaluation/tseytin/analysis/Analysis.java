@@ -287,7 +287,8 @@ public abstract class Analysis implements Serializable {
 					ProcessBuilder processBuilder = new ProcessBuilder(command);
 					try {
 						process = processBuilder.start();
-						final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+						final BufferedReader reader = new BufferedReader(new InputStreamReader(process
+							.getInputStream()));
 						boolean success;
 						if (useTimeout)
 							success = process.waitFor(parameters.timeout, TimeUnit.MILLISECONDS);
