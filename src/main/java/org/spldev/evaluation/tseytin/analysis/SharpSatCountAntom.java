@@ -9,10 +9,11 @@ public class SharpSatCountAntom extends Analysis.ProcessAnalysis<String> {
 
 	@Override
 	String[] getCommand() {
-		final String[] command = new String[2];
-		command[0] = "ext-libs/countAntom";
-		// command[1] = "--doTseitin=no";
-		command[1] = getTempPath().toString();
+		final String[] command = new String[4];
+		command[0] = "/usr/bin/timeout";
+		command[1] = String.valueOf((int) (Math.ceil(parameters.timeout) / 1000.0));
+		command[2] = "ext-libs/countAntom";
+		command[3] = getTempPath().toString();
 		return command;
 	}
 

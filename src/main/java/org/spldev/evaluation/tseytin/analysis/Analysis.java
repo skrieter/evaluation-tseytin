@@ -279,36 +279,38 @@ public abstract class Analysis implements Serializable {
 
 		@Override
 		public void run() {
-			final String[] command = getCommand();
-			Result<T> result = execute(() -> {
-				T payload = getDefaultResult();
-				Process process = null;
-				ProcessBuilder processBuilder = new ProcessBuilder(command);
-				try {
-					process = processBuilder.start();
-					final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-					boolean success;
-					if (useTimeout)
-						success = process.waitFor(parameters.timeout, TimeUnit.MILLISECONDS);
-					else
-						success = process.waitFor() == 0;
-					if (success) {
-						process = null;
-						payload = getPayload(reader.lines());
+			if (fileExists(getTempPath())) {
+				final String[] command = getCommand();
+				Result<T> result = execute(() -> {
+					T payload = getDefaultResult();
+					Process process = null;
+					ProcessBuilder processBuilder = new ProcessBuilder(command);
+					try {
+						process = processBuilder.start();
+						final BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+						boolean success;
+						if (useTimeout)
+							success = process.waitFor(parameters.timeout, TimeUnit.MILLISECONDS);
+						else
+							success = process.waitFor() == 0;
+						if (success) {
+							process = null;
+							payload = getPayload(reader.lines());
+						}
+					} catch (IOException | InterruptedException e) {
+						e.printStackTrace();
+					} finally {
+						if (process != null) {
+							process.destroyForcibly();
+						}
 					}
-				} catch (IOException | InterruptedException e) {
-					e.printStackTrace();
-				} finally {
-					if (process != null) {
-						process.destroyForcibly();
-					}
-				}
-				return payload;
-			});
-			if (result == null)
-				return;
-			result.md5 = getMd5(result.payload);
-			printResult(result);
+					return payload;
+				});
+				if (result == null)
+					return;
+				result.md5 = getMd5(result.payload);
+				printResult(result);
+			}
 		}
 
 		abstract String[] getCommand();
