@@ -263,7 +263,7 @@ public abstract class Analysis implements Serializable {
 		@Override
 		public void run() throws Exception {
 			if (fileExists(getTempPath())) {
-				final org.spldev.util.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
+				final org.spldev.util.data.Result<ModelRepresentation> rep = ModelRepresentation.load(getTempPath());
 				if (rep.isPresent()) {
 					run(rep.get());
 				}

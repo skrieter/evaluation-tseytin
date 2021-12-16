@@ -22,17 +22,9 @@
  */
 package org.spldev.evaluation.tseytin;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.*;
 
-import de.ovgu.featureide.fm.core.base.impl.FMFormatManager;
 import org.spldev.evaluation.*;
 import org.spldev.evaluation.process.*;
 import org.spldev.evaluation.tseytin.analysis.Analysis;
@@ -41,14 +33,8 @@ import org.spldev.formula.expression.*;
 import org.spldev.formula.expression.atomic.literal.*;
 import org.spldev.formula.expression.io.*;
 import org.spldev.formula.expression.transform.*;
-import org.spldev.util.Result;
 import org.spldev.util.data.Pair;
-import org.spldev.util.io.FileHandler;
 import org.spldev.util.io.csv.*;
-import org.spldev.util.io.format.Input;
-import org.spldev.util.io.format.InputHeader;
-
-import static org.spldev.util.io.FileHandler.DEFAULT_CHARSET;
 
 public class TseytinEvaluator extends Evaluator {
 	protected CSVWriter writer, systemWriter;
