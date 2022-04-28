@@ -1,18 +1,41 @@
+/* -----------------------------------------------------------------------------
+ * Evaluation-Tseytin - Program for the evaluation of the Tseytin transformation.
+ * Copyright (C) 2021  Sebastian Krieter, Elias Kuiter
+ * 
+ * This file is part of Evaluation-Tseytin.
+ * 
+ * Evaluation-Tseytin is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License,
+ * or (at your option) any later version.
+ * 
+ * Evaluation-Tseytin is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Evaluation-Tseytin.  If not, see <https://www.gnu.org/licenses/>.
+ * 
+ * See <https://github.com/ekuiter/evaluation-tseytin> for further information.
+ * -----------------------------------------------------------------------------
+ */
 package org.spldev.evaluation.tseytin.analysis;
 
 import de.ovgu.featureide.fm.core.analysis.cnf.CNF;
 import de.ovgu.featureide.fm.core.base.IFeatureModel;
 import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager;
+
+import org.spldev.analysis.solver.*;
 import org.spldev.evaluation.tseytin.Parameters;
 import org.spldev.evaluation.tseytin.Wrapper;
 import org.spldev.evaluation.util.ModelReader;
 import org.spldev.formula.ModelRepresentation;
-import org.spldev.formula.expression.Formula;
-import org.spldev.formula.expression.atomic.literal.VariableMap;
-import org.spldev.formula.expression.io.DIMACSFormat;
-import org.spldev.formula.expression.io.FormulaFormatManager;
-import org.spldev.formula.expression.transform.Transformer;
-import org.spldev.formula.solver.RuntimeTimeoutException;
+import org.spldev.formula.io.*;
+import org.spldev.formula.io.dimacs.*;
+import org.spldev.formula.structure.*;
+import org.spldev.formula.structure.atomic.literal.*;
+import org.spldev.formula.structure.transform.*;
 import org.spldev.util.data.Pair;
 import org.spldev.util.io.FileHandler;
 import org.spldev.util.job.Executor;
@@ -31,6 +54,7 @@ import java.util.stream.Stream;
 
 public abstract class Analysis implements Serializable {
 	private static final long serialVersionUID = 1L;
+
 	public static Analysis[] transformations = new Analysis[] {
 		new Transform.TseytinZ3(),
 		new Transform.TseytinSPLDev(),
@@ -239,6 +263,8 @@ public abstract class Analysis implements Serializable {
 	abstract public void run() throws Exception;
 
 	abstract static class Transformation extends Analysis {
+		private static final long serialVersionUID = 1L;
+
 		@Override
 		public String toString() {
 			return getClass().getSimpleName();
@@ -246,6 +272,8 @@ public abstract class Analysis implements Serializable {
 	}
 
 	abstract static class FeatureIDEAnalysis extends Analysis {
+		private static final long serialVersionUID = 1L;
+
 		@Override
 		public void run() throws Exception {
 			if (fileExists(getTempPath())) {
@@ -260,6 +288,8 @@ public abstract class Analysis implements Serializable {
 	}
 
 	abstract static class SPLDevAnalysis extends Analysis {
+		private static final long serialVersionUID = 1L;
+
 		@Override
 		public void run() throws Exception {
 			if (fileExists(getTempPath())) {
@@ -274,6 +304,7 @@ public abstract class Analysis implements Serializable {
 	}
 
 	abstract static class ProcessAnalysis<T> extends Analysis {
+		private static final long serialVersionUID = 1L;
 		protected boolean useTimeout;
 
 		@Override

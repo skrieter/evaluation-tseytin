@@ -1,31 +1,61 @@
+/* -----------------------------------------------------------------------------
+ * Evaluation-Tseytin - Program for the evaluation of the Tseytin transformation.
+ * Copyright (C) 2021  Sebastian Krieter, Elias Kuiter
+ * 
+ * This file is part of Evaluation-Tseytin.
+ * 
+ * Evaluation-Tseytin is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License,
+ * or (at your option) any later version.
+ * 
+ * Evaluation-Tseytin is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU Lesser General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with Evaluation-Tseytin.  If not, see <https://www.gnu.org/licenses/>.
+ * 
+ * See <https://github.com/ekuiter/evaluation-tseytin> for further information.
+ * -----------------------------------------------------------------------------
+ */
 package org.spldev.evaluation.tseytin.analysis;
 
-import de.ovgu.featureide.fm.core.analysis.cnf.CNF;
-import de.ovgu.featureide.fm.core.analysis.cnf.formula.FeatureModelFormula;
-import de.ovgu.featureide.fm.core.base.IFeatureModel;
-import de.ovgu.featureide.fm.core.io.dimacs.DIMACSFormatCNF;
-import de.ovgu.featureide.fm.core.io.manager.FeatureModelManager;
-import org.spldev.formula.expression.Formula;
-import org.spldev.formula.expression.transform.CNFTransformer;
-import org.spldev.formula.solver.javasmt.CNFTseytinTransformer;
+import java.nio.file.*;
 
-import java.nio.file.Paths;
+import org.spldev.analysis.javasmt.solver.*;
+import org.spldev.formula.structure.*;
+import org.spldev.formula.structure.transform.*;
 
-public class Transform extends Analysis {
+import de.ovgu.featureide.fm.core.analysis.cnf.*;
+import de.ovgu.featureide.fm.core.analysis.cnf.formula.*;
+import de.ovgu.featureide.fm.core.base.*;
+import de.ovgu.featureide.fm.core.io.dimacs.*;
+import de.ovgu.featureide.fm.core.io.manager.*;
+
+public abstract class Transform extends Analysis {
+
+	private static final long serialVersionUID = 1L;
+
 	@Override
 	public void run() throws Exception {
 		parameters.transformation.run();
 	}
 
 	public static class TseytinZ3 extends Transformation {
+		private static final long serialVersionUID = 1243195775258320809L;
+
 		@Override
 		public void run() {
 			Formula formula = readFormula(Paths.get(parameters.modelPath));
-			processFormulaResult(executeTransformer(formula, new CNFTseytinTransformer()));
+			processFormulaResult(executeTransformer(formula, new CNFTseitinTransformer()));
 		}
 	}
 
 	public static class TseytinSPLDev extends Transformation {
+		private static final long serialVersionUID = 8198210007041611191L;
+
 		@Override
 		public void run() {
 			Formula formula = readFormula(Paths.get(parameters.modelPath));
@@ -36,6 +66,8 @@ public class Transform extends Analysis {
 	}
 
 	public static class DistribFeatureIDE extends Transformation {
+		private static final long serialVersionUID = 4668156394793748450L;
+
 		@Override
 		public void run() {
 			final IFeatureModel featureModel = FeatureModelManager
@@ -54,6 +86,8 @@ public class Transform extends Analysis {
 	}
 
 	public static class DistribSPLDev extends Transformation {
+		private static final long serialVersionUID = -6532557981508394209L;
+
 		@Override
 		public void run() {
 			Formula formula = readFormula(Paths.get(parameters.modelPath));
